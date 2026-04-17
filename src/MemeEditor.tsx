@@ -1,5 +1,9 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 
+function uid(): string {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
 interface Template {
   id: string;
   name: string;
@@ -8,13 +12,15 @@ interface Template {
   height: number;
 }
 
-interface TextBlock {
+interface TextBox {
+  id: string;
   text: string;
   x: number; // 0-1 normalized
   y: number; // 0-1 normalized
+  fontSize: number; // px at canvas resolution
+  color: string;
+  outline: boolean;
 }
-
-type PositionMode = 'classic' | 'custom';
 
 const RECENT_KEY = 'meme-recent-ids';
 
@@ -32,48 +38,53 @@ function pushRecent(id: string) {
   localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, 5)));
 }
 
+function makeDefaultBoxes(): TextBox[] {
+  return [
+    { id: uid(), text: '', x: 0.5, y: 0.08, fontSize: 48, color: '#ffffff', outline: true },
+    { id: uid(), text: '', x: 0.5, y: 0.92, fontSize: 48, color: '#ffffff', outline: true },
+  ];
+}
+
+function drawTextBoxes(
+  ctx: CanvasRenderingContext2D,
+  boxes: TextBox[],
+  canvasWidth: number,
+  canvasHeight: number
+) {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  for (const box of boxes) {
+    if (!box.text.trim()) continue;
+    const scaledFont = Math.round(box.fontSize * (canvasWidth / 500));
+    ctx.font = `900 ${scaledFont}px Impact, "Arial Black", sans-serif`;
+    const text = box.text.toUpperCase();
+    const x = box.x * canvasWidth;
+    const y = box.y * canvasHeight;
+
+    if (box.outline) {
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = scaledFont / 8;
+      ctx.lineJoin = 'round';
+      ctx.strokeText(text, x, y, canvasWidth - 20);
+      ctx.fillStyle = '#ffffff';
+    } else {
+      ctx.fillStyle = box.color;
+    }
+    ctx.fillText(text, x, y, canvasWidth - 20);
+  }
+}
+
 function drawMeme(
   canvas: HTMLCanvasElement,
   img: HTMLImageElement,
-  top: TextBlock,
-  bottom: TextBlock,
-  fontSize: number,
-  color: string,
-  outline: boolean,
-  posMode: PositionMode
+  boxes: TextBox[]
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-  const scaledFont = Math.round(fontSize * (canvas.width / 500));
-  ctx.font = `900 ${scaledFont}px Impact, "Arial Black", sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-
-  function drawText(block: TextBlock, defaultY: number, baseline: CanvasTextBaseline) {
-    if (!block.text.trim()) return;
-    ctx!.textBaseline = baseline;
-    const text = block.text.toUpperCase();
-    const x = posMode === 'custom' ? block.x * canvas.width : canvas.width / 2;
-    const y = posMode === 'custom' ? block.y * canvas.height : defaultY;
-
-    if (outline) {
-      ctx!.strokeStyle = 'black';
-      ctx!.lineWidth = scaledFont * 0.12;
-      ctx!.lineJoin = 'round';
-      ctx!.strokeText(text, x, y, canvas.width - 20);
-    }
-    ctx!.fillStyle = color;
-    ctx!.fillText(text, x, y, canvas.width - 20);
-  }
-
-  const margin = Math.round(scaledFont * 0.3);
-  drawText(top, margin, 'top');
-  ctx.textBaseline = 'bottom';
-  drawText(bottom, canvas.height - margin, 'bottom');
+  drawTextBoxes(ctx, boxes, canvas.width, canvas.height);
 }
 
 export function MemeEditor() {
@@ -82,14 +93,8 @@ export function MemeEditor() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Template | null>(null);
   const [loadedImg, setLoadedImg] = useState<HTMLImageElement | null>(null);
-  const [topText, setTopText] = useState('');
-  const [bottomText, setBottomText] = useState('');
-  const [fontSize, setFontSize] = useState(48);
-  const [color, setColor] = useState('#ffffff');
-  const [outline, setOutline] = useState(true);
-  const [posMode, setPosMode] = useState<PositionMode>('classic');
-  const [topPos, setTopPos] = useState({ x: 0.5, y: 0.05 });
-  const [bottomPos, setBottomPos] = useState({ x: 0.5, y: 0.95 });
+  const [textBoxes, setTextBoxes] = useState<TextBox[]>(makeDefaultBoxes());
+  const [activeBoxId, setActiveBoxId] = useState<string | null>(null);
   const [carouselCollapsed, setCarouselCollapsed] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -97,8 +102,9 @@ export function MemeEditor() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLElement>(null);
 
-  // drag state
-  const dragTarget = useRef<'top' | 'bottom' | null>(null);
+  // drag state - stored in refs to avoid stale closures
+  const dragBoxId = useRef<string | null>(null);
+  const dragOffsetRef = useRef({ dx: 0, dy: 0 });
 
   const recent = getRecent();
 
@@ -114,17 +120,8 @@ export function MemeEditor() {
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !loadedImg) return;
-    drawMeme(
-      canvas,
-      loadedImg,
-      { text: topText, ...topPos },
-      { text: bottomText, ...bottomPos },
-      fontSize,
-      color,
-      outline,
-      posMode
-    );
-  }, [loadedImg, topText, bottomText, fontSize, color, outline, posMode, topPos, bottomPos]);
+    drawMeme(canvas, loadedImg, textBoxes);
+  }, [loadedImg, textBoxes]);
 
   useEffect(() => {
     redraw();
@@ -135,10 +132,8 @@ export function MemeEditor() {
   const loadTemplate = useCallback((tmpl: Template) => {
     setSelected(tmpl);
     pushRecent(tmpl.id);
-    setTopPos({ x: 0.5, y: 0.05 });
-    setBottomPos({ x: 0.5, y: 0.95 });
+    setTextBoxes(makeDefaultBoxes());
 
-    // Auto-collapse carousel on mobile after selecting a template
     if (isMobile()) {
       setCarouselCollapsed(true);
     }
@@ -175,8 +170,7 @@ export function MemeEditor() {
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
       }
-      setTopPos({ x: 0.5, y: 0.05 });
-      setBottomPos({ x: 0.5, y: 0.95 });
+      setTextBoxes(makeDefaultBoxes());
       setLoadedImg(img);
     };
     img.src = url;
@@ -187,16 +181,7 @@ export function MemeEditor() {
     const offscreen = document.createElement('canvas');
     offscreen.width = selected.width;
     offscreen.height = selected.height;
-    drawMeme(
-      offscreen,
-      loadedImg,
-      { text: topText, ...topPos },
-      { text: bottomText, ...bottomPos },
-      fontSize,
-      color,
-      outline,
-      posMode
-    );
+    drawMeme(offscreen, loadedImg, textBoxes);
     offscreen.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
@@ -208,39 +193,127 @@ export function MemeEditor() {
     }, 'image/png');
   };
 
-  const getCanvasPos = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current!;
+  // Convert screen coords to normalized canvas coords
+  const screenToCanvas = (clientX: number, clientY: number): { x: number; y: number } | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
     return {
-      x: (e.clientX - rect.left) / rect.width,
-      y: (e.clientY - rect.top) / rect.height,
+      x: (clientX - rect.left) / rect.width,
+      y: (clientY - rect.top) / rect.height,
     };
   };
 
-  const hitTest = (nx: number, ny: number): 'top' | 'bottom' | null => {
+  // Hit test: find box within ~40px radius (in screen space)
+  const hitTest = (clientX: number, clientY: number): string | null => {
     const canvas = canvasRef.current;
     if (!canvas || !loadedImg) return null;
-    const threshold = 0.12;
-    if (topText && Math.abs(nx - topPos.x) < 0.4 && Math.abs(ny - topPos.y) < threshold) return 'top';
-    if (bottomText && Math.abs(nx - bottomPos.x) < 0.4 && Math.abs(ny - bottomPos.y) < threshold) return 'bottom';
+    const rect = canvas.getBoundingClientRect();
+    const nx = (clientX - rect.left) / rect.width;
+    const ny = (clientY - rect.top) / rect.height;
+    const threshold = 40 / rect.width; // 40px converted to normalized
+
+    // Test in reverse order (last = top-most rendered)
+    for (let i = textBoxes.length - 1; i >= 0; i--) {
+      const box = textBoxes[i];
+      const dx = Math.abs(nx - box.x);
+      const dy = Math.abs(ny - box.y);
+      if (dx < threshold * 3 && dy < threshold) {
+        return box.id;
+      }
+    }
     return null;
   };
 
+  // Mouse events
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (posMode !== 'custom') return;
-    const { x, y } = getCanvasPos(e);
-    dragTarget.current = hitTest(x, y);
+    const hitId = hitTest(e.clientX, e.clientY);
+    if (hitId) {
+      dragBoxId.current = hitId;
+      setActiveBoxId(hitId);
+      const pos = screenToCanvas(e.clientX, e.clientY);
+      const box = textBoxes.find((b) => b.id === hitId);
+      if (pos && box) {
+        dragOffsetRef.current = { dx: pos.x - box.x, dy: pos.y - box.y };
+      }
+      e.preventDefault();
+    }
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (posMode !== 'custom' || !dragTarget.current) return;
-    const { x, y } = getCanvasPos(e);
-    if (dragTarget.current === 'top') setTopPos({ x, y });
-    else setBottomPos({ x, y });
+    if (!dragBoxId.current) return;
+    const pos = screenToCanvas(e.clientX, e.clientY);
+    if (!pos) return;
+    const newX = Math.max(0, Math.min(1, pos.x - dragOffsetRef.current.dx));
+    const newY = Math.max(0, Math.min(1, pos.y - dragOffsetRef.current.dy));
+    setTextBoxes((prev) =>
+      prev.map((b) => (b.id === dragBoxId.current ? { ...b, x: newX, y: newY } : b))
+    );
   };
 
   const handleMouseUp = () => {
-    dragTarget.current = null;
+    dragBoxId.current = null;
+  };
+
+  // Touch events
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    const touch = e.touches[0];
+    const hitId = hitTest(touch.clientX, touch.clientY);
+    if (hitId) {
+      dragBoxId.current = hitId;
+      setActiveBoxId(hitId);
+      const pos = screenToCanvas(touch.clientX, touch.clientY);
+      const box = textBoxes.find((b) => b.id === hitId);
+      if (pos && box) {
+        dragOffsetRef.current = { dx: pos.x - box.x, dy: pos.y - box.y };
+      }
+      e.preventDefault(); // prevent scroll only when hitting a box
+    }
+    // no preventDefault if miss - allows page scroll
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (!dragBoxId.current) return;
+    const touch = e.touches[0];
+    const pos = screenToCanvas(touch.clientX, touch.clientY);
+    if (!pos) return;
+    const newX = Math.max(0, Math.min(1, pos.x - dragOffsetRef.current.dx));
+    const newY = Math.max(0, Math.min(1, pos.y - dragOffsetRef.current.dy));
+    setTextBoxes((prev) =>
+      prev.map((b) => (b.id === dragBoxId.current ? { ...b, x: newX, y: newY } : b))
+    );
+    e.preventDefault();
+  };
+
+  const handleTouchEnd = () => {
+    dragBoxId.current = null;
+  };
+
+  const updateBox = (id: string, patch: Partial<TextBox>) => {
+    setTextBoxes((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+  };
+
+  const addBox = () => {
+    const newBox: TextBox = {
+      id: uid(),
+      text: '',
+      x: 0.5,
+      y: 0.5,
+      fontSize: 48,
+      color: '#ffffff',
+      outline: true,
+    };
+    setTextBoxes((prev) => [...prev, newBox]);
+    setActiveBoxId(newBox.id);
+  };
+
+  const deleteBox = (id: string) => {
+    if (textBoxes.length <= 1) return;
+    setTextBoxes((prev) => prev.filter((b) => b.id !== id));
+    if (activeBoxId === id) {
+      const remaining = textBoxes.filter((b) => b.id !== id);
+      setActiveBoxId(remaining.length > 0 ? remaining[remaining.length - 1].id : null);
+    }
   };
 
   const filtered = templates.filter((t) =>
@@ -283,7 +356,6 @@ export function MemeEditor() {
         }}
         className="template-panel"
       >
-        {/* Search bar - sticky on mobile, hidden when collapsed */}
         <div className={`search-bar-wrapper${carouselCollapsed ? ' search-bar-hidden' : ''}`} style={{ padding: '12px 12px 8px', borderBottom: '1px solid var(--border)' }}>
           <input
             type="text"
@@ -297,7 +369,7 @@ export function MemeEditor() {
               border: '1px solid var(--border)',
               background: 'var(--bg)',
               color: 'var(--text)',
-              fontSize: 16, // 16px prevents iOS zoom on focus
+              fontSize: 16,
               outline: 'none',
               boxSizing: 'border-box',
             }}
@@ -317,7 +389,6 @@ export function MemeEditor() {
             alignContent: 'start',
           }}
         >
-          {/* Upload card */}
           <div
             onClick={() => fileInputRef.current?.click()}
             style={{
@@ -400,7 +471,6 @@ export function MemeEditor() {
 
         {/* Mobile carousel */}
         <div className="template-carousel-wrap" style={{ display: 'none', flexDirection: 'column' }}>
-          {/* Collapsed bar: shown on mobile when a template is selected and carousel is collapsed */}
           {carouselCollapsed && selected && (
             <div
               className="carousel-collapsed-bar"
@@ -459,7 +529,6 @@ export function MemeEditor() {
             </div>
           )}
 
-          {/* Full carousel: hidden when collapsed */}
           {!carouselCollapsed && (
             <div
               className="template-carousel"
@@ -474,7 +543,6 @@ export function MemeEditor() {
                 padding: '10px 7.5vw',
               }}
             >
-              {/* Upload card */}
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="carousel-card"
@@ -630,14 +698,18 @@ export function MemeEditor() {
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
                 style={{
                   maxWidth: '100%',
                   maxHeight: 'calc(100vh - 280px)',
                   objectFit: 'contain',
                   borderRadius: 8,
                   boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
-                  cursor: posMode === 'custom' ? 'crosshair' : 'default',
+                  cursor: 'crosshair',
                   display: 'block',
+                  touchAction: 'pan-y', // allow vertical scroll unless we preventDefault
                 }}
               />
             </div>
@@ -650,114 +722,178 @@ export function MemeEditor() {
                 background: 'var(--surface)',
                 padding: '14px 20px',
                 display: 'flex',
-                flexWrap: 'wrap',
-                gap: 16,
-                alignItems: 'flex-end',
+                flexDirection: 'column',
+                gap: 10,
               }}
             >
-              {/* Top text */}
-              <div style={{ flex: '1 1 160px', minWidth: 140 }}>
-                <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-                  Top text
-                </label>
-                <input
-                  type="text"
-                  value={topText}
-                  onChange={(e) => setTopText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
-                  placeholder="Top text..."
-                  style={inputStyle}
-                />
-              </div>
+              {/* Text box cards */}
+              {textBoxes.map((box, idx) => (
+                <div
+                  key={box.id}
+                  onClick={() => setActiveBoxId(box.id)}
+                  style={{
+                    border: activeBoxId === box.id ? '2px solid var(--accent)' : '2px solid var(--border)',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    background: 'var(--bg)',
+                    cursor: 'pointer',
+                    transition: 'border-color 0.15s',
+                  }}
+                >
+                  {/* Header row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', flex: 1 }}>
+                      Text {idx + 1}
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteBox(box.id); }}
+                      disabled={textBoxes.length <= 1}
+                      title="Remove text box"
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 4,
+                        border: 'none',
+                        background: textBoxes.length <= 1 ? 'var(--surface2)' : '#e55',
+                        color: textBoxes.length <= 1 ? 'var(--text-muted)' : '#fff',
+                        cursor: textBoxes.length <= 1 ? 'not-allowed' : 'pointer',
+                        fontSize: 13,
+                        fontWeight: 700,
+                        lineHeight: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      x
+                    </button>
+                  </div>
 
-              {/* Bottom text */}
-              <div style={{ flex: '1 1 160px', minWidth: 140 }}>
-                <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-                  Bottom text
-                </label>
-                <input
-                  type="text"
-                  value={bottomText}
-                  onChange={(e) => setBottomText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
-                  placeholder="Bottom text..."
-                  style={inputStyle}
-                />
-              </div>
-
-              {/* Font size */}
-              <div style={{ flex: '0 0 140px' }}>
-                <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-                  Font size: {fontSize}px
-                </label>
-                <input
-                  type="range"
-                  min={20}
-                  max={80}
-                  value={fontSize}
-                  onChange={(e) => setFontSize(Number(e.target.value))}
-                  className="font-slider"
-                  style={{ width: '100%', accentColor: 'var(--accent)' }}
-                />
-              </div>
-
-              {/* Text color + outline (inline row) */}
-              <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-                    Text color
-                  </label>
+                  {/* Text input */}
                   <input
-                    type="color"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    style={{ width: 44, height: 34, cursor: 'pointer', borderRadius: 6, border: '1px solid var(--border)', padding: 2, background: 'var(--bg)' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16 }}>
-                  <input
-                    type="checkbox"
-                    id="outline"
-                    checked={outline}
-                    onChange={(e) => setOutline(e.target.checked)}
-                    style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
-                  />
-                  <label htmlFor="outline" style={{ fontSize: 13, cursor: 'pointer', userSelect: 'none' }}>
-                    Outline
-                  </label>
-                </div>
-              </div>
-
-              {/* Position mode */}
-              <div style={{ flex: '0 0 auto', display: 'flex', gap: 6 }}>
-                {(['classic', 'custom'] as PositionMode[]).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setPosMode(m)}
+                    type="text"
+                    value={box.text}
+                    onChange={(e) => updateBox(box.id, { text: e.target.value })}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
+                    placeholder="Enter text..."
                     style={{
-                      padding: '5px 12px',
-                      borderRadius: 6,
-                      border: '1px solid var(--border)',
-                      background: posMode === m ? 'var(--accent)' : 'var(--bg)',
-                      color: posMode === m ? 'var(--bg)' : 'var(--text)',
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      fontWeight: posMode === m ? 600 : 400,
-                      transition: 'background 0.15s, color 0.15s',
+                      ...inputStyle,
+                      marginBottom: 8,
+                      fontSize: 15,
                     }}
-                  >
-                    {m.charAt(0).toUpperCase() + m.slice(1)}
-                  </button>
-                ))}
-              </div>
-              {posMode === 'custom' && (
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', flex: '1 1 100%', marginTop: -8 }}>
-                  Drag text blocks on the canvas to reposition them.
+                  />
+
+                  {/* Controls row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    {/* Font size */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '1 1 120px', minWidth: 100 }}>
+                      <label style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                        Size
+                      </label>
+                      <input
+                        type="range"
+                        min={16}
+                        max={96}
+                        value={box.fontSize}
+                        onChange={(e) => updateBox(box.id, { fontSize: Number(e.target.value) })}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-slider"
+                        style={{ flex: 1, accentColor: 'var(--accent)' }}
+                      />
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 26, textAlign: 'right' }}>
+                        {box.fontSize}
+                      </span>
+                    </div>
+
+                    {/* Color picker */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <label style={{ fontSize: 11, color: 'var(--text-muted)' }}>Color</label>
+                      <input
+                        type="color"
+                        value={box.color}
+                        onChange={(e) => updateBox(box.id, { color: e.target.value })}
+                        onClick={(e) => e.stopPropagation()}
+                        title="Text color"
+                        style={{
+                          width: 30,
+                          height: 30,
+                          cursor: 'pointer',
+                          borderRadius: 6,
+                          border: '1px solid var(--border)',
+                          padding: 2,
+                          background: 'var(--bg)',
+                        }}
+                      />
+                    </div>
+
+                    {/* Outline toggle */}
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}
+                      onClick={(e) => { e.stopPropagation(); updateBox(box.id, { outline: !box.outline }); }}
+                    >
+                      <div
+                        style={{
+                          width: 32,
+                          height: 18,
+                          borderRadius: 9,
+                          background: box.outline ? 'var(--accent)' : 'var(--surface2)',
+                          position: 'relative',
+                          transition: 'background 0.15s',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 2,
+                            left: box.outline ? 14 : 2,
+                            width: 14,
+                            height: 14,
+                            borderRadius: '50%',
+                            background: '#fff',
+                            transition: 'left 0.15s',
+                          }}
+                        />
+                      </div>
+                      <label style={{ fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer', userSelect: 'none' }}>
+                        Outline
+                      </label>
+                    </div>
+                  </div>
                 </div>
-              )}
+              ))}
+
+              {/* Add text button */}
+              <button
+                onClick={addBox}
+                style={{
+                  padding: '8px 0',
+                  borderRadius: 8,
+                  border: '2px dashed var(--border)',
+                  background: 'transparent',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  transition: 'border-color 0.15s, color 0.15s',
+                  width: '100%',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--accent)';
+                  e.currentTarget.style.color = 'var(--accent)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                }}
+              >
+                + Add text
+              </button>
 
               {/* Download */}
-              <div className="download-wrapper" style={{ flex: '0 0 auto', marginLeft: 'auto' }}>
+              <div className="download-wrapper" style={{ marginTop: 4 }}>
                 <button
                   onClick={handleDownload}
                   className="download-btn"
@@ -772,6 +908,7 @@ export function MemeEditor() {
                     fontWeight: 700,
                     letterSpacing: 0.5,
                     transition: 'opacity 0.15s',
+                    width: '100%',
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
                   onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
@@ -799,7 +936,6 @@ export function MemeEditor() {
             overflow-x: hidden !important;
           }
 
-          /* Template panel: full-width, auto height for carousel */
           .template-panel {
             width: 100vw !important;
             max-width: 100% !important;
@@ -810,12 +946,10 @@ export function MemeEditor() {
             box-sizing: border-box !important;
           }
 
-          /* Search bar above carousel */
           .search-bar-wrapper {
             padding: 10px 12px 8px !important;
           }
 
-          /* Hide desktop grid, show mobile carousel */
           .template-grid {
             display: none !important;
           }
@@ -823,40 +957,33 @@ export function MemeEditor() {
             display: flex !important;
           }
 
-          /* Hide search bar when carousel is collapsed */
           .search-bar-hidden {
             display: none !important;
           }
 
-          /* Collapsed bar visible on mobile only */
           .carousel-collapsed-bar {
             display: flex !important;
           }
 
-          /* Hide scrollbar in carousel */
           .template-carousel::-webkit-scrollbar {
             display: none !important;
           }
 
-          /* Card active press feedback */
           .carousel-card:active {
             opacity: 0.85 !important;
           }
 
-          /* Editor area: scrollable, not fixed height */
           .meme-main {
             flex: 1 1 auto !important;
             overflow-y: auto !important;
             overflow-x: hidden !important;
           }
 
-          /* Editor split: column, natural height */
           .editor-split {
             height: auto !important;
             overflow: visible !important;
           }
 
-          /* Canvas: auto-sized, maintains aspect ratio */
           .canvas-wrapper {
             padding: 12px !important;
           }
@@ -867,20 +994,13 @@ export function MemeEditor() {
             height: auto !important;
           }
 
-          /* Controls: natural height, no scrolling container */
           .controls-panel {
             padding: 12px !important;
-            gap: 12px !important;
+            gap: 10px !important;
             overflow: visible !important;
           }
-          .controls-panel > div {
-            flex: 1 1 100% !important;
-            min-width: unset !important;
-          }
 
-          /* Download button full-width */
           .download-wrapper {
-            flex: 1 1 100% !important;
             margin-left: 0 !important;
           }
           .download-btn {
@@ -889,7 +1009,6 @@ export function MemeEditor() {
             font-size: 17px !important;
           }
 
-          /* Font slider: larger thumb for touch */
           .font-slider {
             height: 24px !important;
             cursor: pointer !important;
@@ -919,7 +1038,6 @@ export function MemeEditor() {
             display: block !important;
           }
 
-          /* Desktop editor: canvas left (60%), controls right (40%) */
           .editor-split {
             flex-direction: row !important;
             align-items: stretch !important;
@@ -944,14 +1062,11 @@ export function MemeEditor() {
             border-left: 1px solid var(--border) !important;
             flex-direction: column !important;
             align-items: stretch !important;
-            padding: 20px !important;
-          }
-          .controls-panel > div {
-            flex: 0 0 auto !important;
+            padding: 16px !important;
           }
           .download-wrapper {
             margin-left: 0 !important;
-            margin-top: 8px !important;
+            margin-top: 4px !important;
           }
           .download-btn {
             width: 100% !important;
@@ -967,9 +1082,10 @@ const inputStyle: React.CSSProperties = {
   padding: '7px 10px',
   borderRadius: 6,
   border: '1px solid var(--border)',
-  background: 'var(--bg)',
+  background: 'var(--surface)',
   color: 'var(--text)',
   fontSize: 14,
   outline: 'none',
   fontFamily: 'system-ui, sans-serif',
+  boxSizing: 'border-box',
 };
