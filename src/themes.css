@@ -3,8 +3,8 @@
   --bg: #1e1e2e;
   --surface: #313244;
   --surface2: #45475a;
-  --accent: #cba6f7;
-  --accent2: #89b4fa;
+  --accent: #f5c2e7;
+  --accent2: #cba6f7;
   --text: #cdd6f4;
   --text-muted: #a6adc8;
   --border: #45475a;
@@ -14,14 +14,14 @@
 
 /* Tokyo Night theme */
 [data-theme="tokyo"] {
-  --bg: #1a1b26;
-  --surface: #24283b;
-  --surface2: #414868;
-  --accent: #bb9af7;
+  --bg: #16161e;
+  --surface: #1a1b26;
+  --surface2: #292e42;
+  --accent: #73daca;
   --accent2: #7aa2f7;
   --text: #c0caf5;
   --text-muted: #a9b1d6;
-  --border: #414868;
+  --border: #3b4261;
   --danger: #f7768e;
   --success: #9ece6a;
 }
@@ -30,11 +30,11 @@
 [data-theme="dracula"] {
   --bg: #282a36;
   --surface: #44475a;
-  --surface2: #6272a4;
-  --accent: #bd93f9;
-  --accent2: #8be9fd;
+  --surface2: #4f5273;
+  --accent: #ff79c6;
+  --accent2: #bd93f9;
   --text: #f8f8f2;
-  --text-muted: #6272a4;
+  --text-muted: #c3c3c6;
   --border: #6272a4;
   --danger: #ff5555;
   --success: #50fa7b;
@@ -45,8 +45,8 @@
   --bg: #2e3440;
   --surface: #3b4252;
   --surface2: #434c5e;
-  --accent: #88c0d0;
-  --accent2: #81a1c1;
+  --accent: #a3be8c;
+  --accent2: #88c0d0;
   --text: #eceff4;
   --text-muted: #d8dee9;
   --border: #4c566a;
