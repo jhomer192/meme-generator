@@ -1,0 +1,55 @@
+/* Mocha theme (default) */
+[data-theme="mocha"] {
+  --bg: #1e1e2e;
+  --surface: #313244;
+  --surface2: #45475a;
+  --accent: #cba6f7;
+  --accent2: #89b4fa;
+  --text: #cdd6f4;
+  --text-muted: #a6adc8;
+  --border: #45475a;
+  --danger: #f38ba8;
+  --success: #a6e3a1;
+}
+
+/* Tokyo Night theme */
+[data-theme="tokyo"] {
+  --bg: #1a1b26;
+  --surface: #24283b;
+  --surface2: #414868;
+  --accent: #bb9af7;
+  --accent2: #7aa2f7;
+  --text: #c0caf5;
+  --text-muted: #a9b1d6;
+  --border: #414868;
+  --danger: #f7768e;
+  --success: #9ece6a;
+}
+
+/* Dracula theme */
+[data-theme="dracula"] {
+  --bg: #282a36;
+  --surface: #44475a;
+  --surface2: #6272a4;
+  --accent: #bd93f9;
+  --accent2: #8be9fd;
+  --text: #f8f8f2;
+  --text-muted: #6272a4;
+  --border: #6272a4;
+  --danger: #ff5555;
+  --success: #50fa7b;
+}
+
+/* Nord theme */
+[data-theme="nord"] {
+  --bg: #2e3440;
+  --surface: #3b4252;
+  --surface2: #434c5e;
+  --accent: #88c0d0;
+  --accent2: #81a1c1;
+  --text: #eceff4;
+  --text-muted: #d8dee9;
+  --border: #4c566a;
+  --danger: #bf616a;
+  --success: #a3be8c;
+}
