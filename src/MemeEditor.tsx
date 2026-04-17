@@ -94,6 +94,7 @@ export function MemeEditor() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<HTMLElement>(null);
 
   // drag state
   const dragTarget = useRef<'top' | 'bottom' | null>(null);
@@ -128,6 +129,8 @@ export function MemeEditor() {
     redraw();
   }, [redraw]);
 
+  const isMobile = () => window.innerWidth < 640;
+
   const loadTemplate = useCallback((tmpl: Template) => {
     setSelected(tmpl);
     pushRecent(tmpl.id);
@@ -143,6 +146,13 @@ export function MemeEditor() {
         canvas.height = tmpl.height;
       }
       setLoadedImg(img);
+
+      // Auto-scroll to editor on mobile after template loads
+      if (isMobile() && editorRef.current) {
+        setTimeout(() => {
+          editorRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
     };
     img.src = tmpl.url;
   }, []);
@@ -274,7 +284,8 @@ export function MemeEditor() {
         }}
         className="template-panel"
       >
-        <div style={{ padding: '12px 12px 8px', borderBottom: '1px solid var(--border)' }}>
+        {/* Search bar - sticky on mobile */}
+        <div className="search-bar-wrapper" style={{ padding: '12px 12px 8px', borderBottom: '1px solid var(--border)' }}>
           <input
             type="text"
             placeholder="Search templates..."
@@ -282,17 +293,19 @@ export function MemeEditor() {
             onChange={(e) => setSearch(e.target.value)}
             style={{
               width: '100%',
-              padding: '7px 10px',
-              borderRadius: 6,
+              padding: '9px 12px',
+              borderRadius: 8,
               border: '1px solid var(--border)',
               background: 'var(--bg)',
               color: 'var(--text)',
-              fontSize: 14,
+              fontSize: 16, // 16px prevents iOS zoom on focus
               outline: 'none',
+              boxSizing: 'border-box',
             }}
           />
         </div>
 
+        {/* Desktop grid */}
         <div
           className="template-grid"
           style={{
@@ -385,15 +398,139 @@ export function MemeEditor() {
                 </div>
               ))}
         </div>
+
+        {/* Mobile list */}
+        <div className="template-list" style={{ display: 'none', flex: 1, overflowY: 'auto' }}>
+          {/* Upload row */}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="template-row"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '8px 12px',
+              minHeight: 56,
+              cursor: 'pointer',
+              borderBottom: '1px solid var(--border)',
+              background: 'var(--bg)',
+            }}
+          >
+            <div
+              style={{
+                width: 80,
+                height: 60,
+                flexShrink: 0,
+                border: '2px dashed var(--border)',
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 24,
+                color: 'var(--text-muted)',
+              }}
+            >
+              +
+            </div>
+            <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500 }}>Upload your own image</span>
+          </div>
+
+          {loading
+            ? Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '8px 12px',
+                    minHeight: 56,
+                    borderBottom: '1px solid var(--border)',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 80,
+                      height: 60,
+                      flexShrink: 0,
+                      background: 'var(--surface2)',
+                      borderRadius: 6,
+                      animation: 'pulse 1.5s ease-in-out infinite',
+                    }}
+                  />
+                  <div
+                    style={{
+                      flex: 1,
+                      height: 16,
+                      background: 'var(--surface2)',
+                      borderRadius: 4,
+                      animation: 'pulse 1.5s ease-in-out infinite',
+                    }}
+                  />
+                </div>
+              ))
+            : displayList.map((tmpl) => (
+                <div
+                  key={tmpl.id}
+                  className="template-row"
+                  onClick={() => loadTemplate(tmpl)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '8px 12px',
+                    minHeight: 56,
+                    cursor: 'pointer',
+                    borderBottom: '1px solid var(--border)',
+                    background: selected?.id === tmpl.id ? 'var(--accent-subtle, color-mix(in srgb, var(--accent) 15%, transparent))' : 'var(--surface)',
+                    transition: 'background 0.15s',
+                  }}
+                >
+                  <img
+                    src={tmpl.url}
+                    alt={tmpl.name}
+                    loading="lazy"
+                    style={{
+                      width: 80,
+                      height: 60,
+                      flexShrink: 0,
+                      objectFit: 'cover',
+                      borderRadius: 6,
+                      border: selected?.id === tmpl.id ? '2px solid var(--accent)' : '2px solid transparent',
+                    }}
+                  />
+                  <span
+                    style={{
+                      flex: 1,
+                      fontSize: 14,
+                      fontWeight: selected?.id === tmpl.id ? 600 : 400,
+                      color: selected?.id === tmpl.id ? 'var(--accent)' : 'var(--text)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {recent.includes(tmpl.id) && !search && (
+                      <span style={{ color: 'var(--accent)', marginRight: 4 }}>*</span>
+                    )}
+                    {tmpl.name}
+                  </span>
+                  {selected?.id === tmpl.id && (
+                    <span style={{ color: 'var(--accent)', fontSize: 18, flexShrink: 0, fontWeight: 700 }}>✓</span>
+                  )}
+                </div>
+              ))}
+        </div>
+
         {!loading && (
-          <div style={{ padding: '6px 12px', fontSize: 11, color: 'var(--text-muted)', borderTop: '1px solid var(--border)' }}>
+          <div style={{ padding: '6px 12px', fontSize: 11, color: 'var(--text-muted)', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
             {displayList.length} templates
           </div>
         )}
       </aside>
 
       {/* Editor Area */}
-      <main className="meme-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'auto' }}>
+      <main ref={editorRef} className="meme-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'auto' }}>
         {!selected ? (
           <div
             style={{
@@ -404,17 +541,20 @@ export function MemeEditor() {
               justifyContent: 'center',
               color: 'var(--text-muted)',
               gap: 12,
+              padding: 20,
+              textAlign: 'center',
             }}
           >
             <div style={{ fontSize: 64 }}>🎭</div>
             <div style={{ fontSize: 20, fontWeight: 600 }}>Pick a template to get started</div>
-            <div style={{ fontSize: 14 }}>Choose from the panel on the left, or upload your own image.</div>
+            <div style={{ fontSize: 14 }}>Choose from the list above, or upload your own image.</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0, height: '100%' }}>
             {/* Canvas */}
             <div
               ref={containerRef}
+              className="canvas-wrapper"
               style={{
                 flex: 1,
                 display: 'flex',
@@ -445,6 +585,7 @@ export function MemeEditor() {
 
             {/* Controls */}
             <div
+              className="controls-panel"
               style={{
                 borderTop: '1px solid var(--border)',
                 background: 'var(--surface)',
@@ -496,6 +637,7 @@ export function MemeEditor() {
                   max={80}
                   value={fontSize}
                   onChange={(e) => setFontSize(Number(e.target.value))}
+                  className="font-slider"
                   style={{ width: '100%', accentColor: 'var(--accent)' }}
                 />
               </div>
@@ -556,9 +698,10 @@ export function MemeEditor() {
               )}
 
               {/* Download */}
-              <div style={{ flex: '0 0 auto', marginLeft: 'auto' }}>
+              <div className="download-wrapper" style={{ flex: '0 0 auto', marginLeft: 'auto' }}>
                 <button
                   onClick={handleDownload}
+                  className="download-btn"
                   style={{
                     padding: '8px 22px',
                     borderRadius: 8,
@@ -587,24 +730,106 @@ export function MemeEditor() {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.4; }
         }
-        @media (max-width: 640px) {
+
+        /* Mobile: < 640px */
+        @media (max-width: 639px) {
           .meme-layout {
             flex-direction: column !important;
           }
+
+          /* Template panel: full-width, fixed height, no right border */
           .template-panel {
             width: 100% !important;
             min-width: unset !important;
             border-right: none !important;
             border-bottom: 1px solid var(--border) !important;
-            max-height: 260px;
+            max-height: 50vh !important;
+            min-height: 260px !important;
             flex-shrink: 0 !important;
           }
-          .template-panel .template-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
+
+          /* Search bar sticky at top of panel */
+          .search-bar-wrapper {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 10 !important;
+            background: var(--surface) !important;
+            padding: 10px 12px 8px !important;
           }
+
+          /* Hide desktop grid, show mobile list */
+          .template-grid {
+            display: none !important;
+          }
+          .template-list {
+            display: block !important;
+          }
+
+          /* Tap target active state */
+          .template-row:active {
+            background: color-mix(in srgb, var(--accent) 10%, var(--surface)) !important;
+          }
+
+          /* Editor area below templates */
           .meme-main {
             min-height: 0;
             flex: 1 1 0 !important;
+            overflow: auto !important;
+          }
+
+          /* Canvas fills width, no overflow */
+          .canvas-wrapper {
+            padding: 12px !important;
+          }
+          .canvas-wrapper canvas {
+            max-width: 100% !important;
+            width: 100% !important;
+            max-height: 55vw !important;
+          }
+
+          /* Controls: stack vertically, full-width inputs */
+          .controls-panel {
+            padding: 12px !important;
+            gap: 12px !important;
+          }
+          .controls-panel > div {
+            flex: 1 1 100% !important;
+            min-width: unset !important;
+          }
+
+          /* Download button full-width */
+          .download-wrapper {
+            flex: 1 1 100% !important;
+            margin-left: 0 !important;
+          }
+          .download-btn {
+            width: 100% !important;
+            padding: 14px !important;
+            font-size: 17px !important;
+          }
+
+          /* Font slider: larger thumb for touch */
+          .font-slider {
+            height: 24px !important;
+            cursor: pointer !important;
+          }
+          .font-slider::-webkit-slider-thumb {
+            width: 28px !important;
+            height: 28px !important;
+          }
+          .font-slider::-moz-range-thumb {
+            width: 28px !important;
+            height: 28px !important;
+          }
+        }
+
+        /* Desktop: >= 640px */
+        @media (min-width: 640px) {
+          .template-list {
+            display: none !important;
+          }
+          .template-grid {
+            display: grid !important;
           }
         }
       `}</style>
