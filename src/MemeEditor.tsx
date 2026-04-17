@@ -93,6 +93,7 @@ export function MemeEditor() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Template | null>(null);
   const [loadedImg, setLoadedImg] = useState<HTMLImageElement | null>(null);
+  const [canvasDims, setCanvasDims] = useState<{ w: number; h: number } | null>(null);
   const [textBoxes, setTextBoxes] = useState<TextBox[]>(makeDefaultBoxes());
   const [activeBoxId, setActiveBoxId] = useState<string | null>(null);
   const [carouselCollapsed, setCarouselCollapsed] = useState(false);
@@ -117,11 +118,24 @@ export function MemeEditor() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Apply canvas dimensions whenever the image or dims change.
+  // This runs after React has committed the canvas to the DOM (which only
+  // happens after `selected` is set), so canvasRef.current is guaranteed
+  // to be non-null here — unlike inside an onload callback.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !canvasDims) return;
+    canvas.width = canvasDims.w;
+    canvas.height = canvasDims.h;
+  }, [canvasDims]);
+
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !loadedImg) return;
     drawMeme(canvas, loadedImg, textBoxes);
-  }, [loadedImg, textBoxes]);
+  // canvasDims in deps ensures redraw runs after dimensions are applied
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedImg, textBoxes, canvasDims]);
 
   useEffect(() => {
     redraw();
@@ -133,6 +147,7 @@ export function MemeEditor() {
     setSelected(tmpl);
     pushRecent(tmpl.id);
     setTextBoxes(makeDefaultBoxes());
+    setLoadedImg(null); // clear stale image while new one loads
 
     if (isMobile()) {
       setCarouselCollapsed(true);
@@ -141,11 +156,10 @@ export function MemeEditor() {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      const canvas = canvasRef.current;
-      if (canvas) {
-        canvas.width = tmpl.width;
-        canvas.height = tmpl.height;
-      }
+      // Don't touch canvasRef here — the canvas may not be in the DOM yet
+      // (it only renders after `selected` state causes a re-render).
+      // Store dims in state; a useEffect will apply them once the canvas mounts.
+      setCanvasDims({ w: tmpl.width, h: tmpl.height });
       setLoadedImg(img);
     };
     img.src = tmpl.url;
@@ -165,11 +179,7 @@ export function MemeEditor() {
         height: img.naturalHeight,
       };
       setSelected(fakeTmpl);
-      const canvas = canvasRef.current;
-      if (canvas) {
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-      }
+      setCanvasDims({ w: img.naturalWidth, h: img.naturalHeight });
       setTextBoxes(makeDefaultBoxes());
       setLoadedImg(img);
     };
