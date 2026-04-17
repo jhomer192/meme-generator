@@ -1,19 +1,6 @@
-/* Mocha theme (default) */
-[data-theme="mocha"] {
-  --bg: #1e1e2e;
-  --surface: #313244;
-  --surface2: #45475a;
-  --accent: #f5c2e7;
-  --accent2: #cba6f7;
-  --text: #cdd6f4;
-  --text-muted: #a6adc8;
-  --border: #45475a;
-  --danger: #f38ba8;
-  --success: #a6e3a1;
-}
-
-/* Tokyo Night theme */
-[data-theme="tokyo"] {
+/* Tokyo Night theme (default) */
+[data-theme="tokyo"],
+:root {
   --bg: #16161e;
   --surface: #1a1b26;
   --surface2: #292e42;
@@ -40,16 +27,16 @@
   --success: #f7ff00;
 }
 
-/* Forest theme */
-[data-theme="forest"] {
-  --bg: #1a2118;
-  --surface: #243024;
-  --surface2: #2e3e2e;
-  --accent: #8fbc6a;
-  --accent2: #c9a96e;
-  --text: #d4dcd0;
-  --text-muted: #a8b5a2;
-  --border: #3a4d3a;
-  --danger: #e07070;
-  --success: #6bb5a0;
+/* Matcha theme */
+[data-theme="matcha"] {
+  --bg: #1c1a17;
+  --surface: #2a2722;
+  --surface2: #363229;
+  --accent: #8db660;
+  --accent2: #d4a852;
+  --text: #e8e0d0;
+  --text-muted: #bfb8a8;
+  --border: #4a4438;
+  --danger: #c17f59;
+  --success: #a0c878;
 }

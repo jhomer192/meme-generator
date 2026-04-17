@@ -7,8 +7,9 @@
     <title>Meme Generator</title>
     <script>
       (function() {
-        var theme = localStorage.getItem('site-theme') || 'mocha';
-        document.documentElement.setAttribute('data-theme', theme);
+        var old = ['mocha', 'tokyo-night', 'dracula', 'nord', 'forest'];
+        var stored = localStorage.getItem('site-theme');
+        document.documentElement.setAttribute('data-theme', (stored && old.indexOf(stored) === -1) ? stored : 'tokyo');
       })();
     </script>
   </head>

@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
 
 const THEMES = [
-  { id: 'mocha', label: 'Mocha', color: '#f5c2e7' },
   { id: 'tokyo', label: 'Tokyo Night', color: '#73daca' },
   { id: 'miami', label: 'Miami', color: '#ff2d95' },
-  { id: 'forest', label: 'Forest', color: '#8fbc6a' },
+  { id: 'matcha', label: 'Matcha', color: '#8db660' },
 ];
+
+const OLD_THEMES = ['mocha', 'tokyo-night', 'dracula', 'nord', 'forest'];
 
 export function ThemePicker() {
   const [current, setCurrent] = useState(
-    () => localStorage.getItem('site-theme') || 'mocha'
+    () => {
+      const stored = localStorage.getItem('site-theme');
+      return (stored && !OLD_THEMES.includes(stored)) ? stored : 'tokyo';
+    }
   );
 
   useEffect(() => {
@@ -23,6 +27,7 @@ export function ThemePicker() {
         <button
           key={t.id}
           title={t.label}
+          aria-label={t.label}
           onClick={() => setCurrent(t.id)}
           style={{
             width: 22,
