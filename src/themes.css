@@ -26,30 +26,30 @@
   --success: #9ece6a;
 }
 
-/* Dracula theme */
-[data-theme="dracula"] {
-  --bg: #282a36;
-  --surface: #44475a;
-  --surface2: #4f5273;
-  --accent: #ff79c6;
-  --accent2: #bd93f9;
-  --text: #f8f8f2;
-  --text-muted: #c3c3c6;
-  --border: #6272a4;
-  --danger: #ff5555;
-  --success: #50fa7b;
+/* Miami theme */
+[data-theme="miami"] {
+  --bg: #0d0221;
+  --surface: #1a0a3e;
+  --surface2: #2d1b69;
+  --accent: #ff2d95;
+  --accent2: #00f0ff;
+  --text: #f0e6ff;
+  --text-muted: #c4b5d9;
+  --border: #3d2b7a;
+  --danger: #ff5aad;
+  --success: #f7ff00;
 }
 
-/* Nord theme */
-[data-theme="nord"] {
-  --bg: #2e3440;
-  --surface: #3b4252;
-  --surface2: #434c5e;
-  --accent: #a3be8c;
-  --accent2: #88c0d0;
-  --text: #eceff4;
-  --text-muted: #d8dee9;
-  --border: #4c566a;
-  --danger: #bf616a;
-  --success: #a3be8c;
+/* Forest theme */
+[data-theme="forest"] {
+  --bg: #1a2118;
+  --surface: #243024;
+  --surface2: #2e3e2e;
+  --accent: #8fbc6a;
+  --accent2: #c9a96e;
+  --text: #d4dcd0;
+  --text-muted: #a8b5a2;
+  --border: #3a4d3a;
+  --danger: #e07070;
+  --success: #6bb5a0;
 }
