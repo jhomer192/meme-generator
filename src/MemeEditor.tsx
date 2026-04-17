@@ -91,7 +91,6 @@ export function MemeEditor() {
   const [topPos, setTopPos] = useState({ x: 0.5, y: 0.05 });
   const [bottomPos, setBottomPos] = useState({ x: 0.5, y: 0.95 });
   const [carouselCollapsed, setCarouselCollapsed] = useState(false);
-  const [editorMode, setEditorMode] = useState<'split' | 'preview' | 'editor'>('split');
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -139,10 +138,9 @@ export function MemeEditor() {
     setTopPos({ x: 0.5, y: 0.05 });
     setBottomPos({ x: 0.5, y: 0.95 });
 
-    // Auto-collapse carousel and go to split mode on mobile after selecting a template
+    // Auto-collapse carousel on mobile after selecting a template
     if (isMobile()) {
       setCarouselCollapsed(true);
-      setEditorMode('split');
     }
 
     const img = new Image();
@@ -614,17 +612,15 @@ export function MemeEditor() {
           </div>
         ) : (
           <div className="editor-split" style={{ display: 'flex', flexDirection: 'column', gap: 0, height: '100%' }}>
-            {/* Canvas area - behaviour changes by editorMode on mobile */}
+            {/* Canvas area */}
             <div
               ref={containerRef}
-              className={`canvas-wrapper canvas-${editorMode}`}
+              className="canvas-wrapper"
               style={{
-                flex: 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: 16,
-                minHeight: 0,
                 background: 'var(--bg)',
               }}
             >
@@ -646,32 +642,9 @@ export function MemeEditor() {
               />
             </div>
 
-            {/* Mobile divider bar - always visible on mobile when template selected */}
-            <div className="mobile-divider-bar">
-              {editorMode === 'split' && (
-                <>
-                  <button className="divider-btn" onClick={() => setEditorMode('preview')}>Full preview</button>
-                  <button className="divider-download-btn" onClick={handleDownload}>Download</button>
-                  <button className="divider-btn" onClick={() => setEditorMode('editor')}>Full editor</button>
-                </>
-              )}
-              {editorMode === 'preview' && (
-                <>
-                  <button className="divider-btn" onClick={() => setEditorMode('split')}>Edit text</button>
-                  <button className="divider-download-btn" onClick={handleDownload}>Download</button>
-                </>
-              )}
-              {editorMode === 'editor' && (
-                <>
-                  <button className="divider-btn" onClick={() => setEditorMode('split')}>Show preview</button>
-                  <button className="divider-download-btn" onClick={handleDownload}>Download</button>
-                </>
-              )}
-            </div>
-
             {/* Controls */}
             <div
-              className={`controls-panel${editorMode === 'preview' ? ' controls-hidden' : ''}`}
+              className="controls-panel"
               style={{
                 borderTop: '1px solid var(--border)',
                 background: 'var(--surface)',
@@ -728,31 +701,31 @@ export function MemeEditor() {
                 />
               </div>
 
-              {/* Text color */}
-              <div style={{ flex: '0 0 auto' }}>
-                <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-                  Text color
-                </label>
-                <input
-                  type="color"
-                  value={color}
-                  onChange={(e) => setColor(e.target.value)}
-                  style={{ width: 44, height: 34, cursor: 'pointer', borderRadius: 6, border: '1px solid var(--border)', padding: 2, background: 'var(--bg)' }}
-                />
-              </div>
-
-              {/* Outline toggle */}
-              <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input
-                  type="checkbox"
-                  id="outline"
-                  checked={outline}
-                  onChange={(e) => setOutline(e.target.checked)}
-                  style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
-                />
-                <label htmlFor="outline" style={{ fontSize: 13, cursor: 'pointer', userSelect: 'none' }}>
-                  Outline
-                </label>
+              {/* Text color + outline (inline row) */}
+              <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                    Text color
+                  </label>
+                  <input
+                    type="color"
+                    value={color}
+                    onChange={(e) => setColor(e.target.value)}
+                    style={{ width: 44, height: 34, cursor: 'pointer', borderRadius: 6, border: '1px solid var(--border)', padding: 2, background: 'var(--bg)' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16 }}>
+                  <input
+                    type="checkbox"
+                    id="outline"
+                    checked={outline}
+                    onChange={(e) => setOutline(e.target.checked)}
+                    style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="outline" style={{ fontSize: 13, cursor: 'pointer', userSelect: 'none' }}>
+                    Outline
+                  </label>
+                </div>
               </div>
 
               {/* Position mode */}
@@ -870,113 +843,42 @@ export function MemeEditor() {
             opacity: 0.85 !important;
           }
 
-          /* Editor area below templates */
+          /* Editor area: scrollable, not fixed height */
           .meme-main {
-            min-height: 0;
-            flex: 1 1 0 !important;
-            overflow: hidden !important;
-          }
-
-          /* Editor split container fills available height */
-          .editor-split {
-            height: 100% !important;
-            overflow: hidden !important;
-          }
-
-          /* Canvas: split mode - top 50% */
-          .canvas-wrapper.canvas-split {
-            flex: 1 !important;
-            max-height: calc(50% - 18px) !important;
-            padding: 8px !important;
-            overflow: hidden !important;
-          }
-          .canvas-wrapper.canvas-split canvas {
-            max-width: 100% !important;
-            max-height: 100% !important;
-            width: auto !important;
-          }
-
-          /* Canvas: full preview mode - takes all remaining space */
-          .canvas-wrapper.canvas-preview {
-            flex: 1 !important;
-            max-height: none !important;
-            padding: 12px !important;
-            overflow: hidden !important;
-          }
-          .canvas-wrapper.canvas-preview canvas {
-            max-width: 100% !important;
-            max-height: 100% !important;
-            width: auto !important;
-          }
-
-          /* Canvas: editor mode - collapsed to 36px bar (handled by divider bar) */
-          .canvas-wrapper.canvas-editor {
-            flex: 0 0 0px !important;
-            max-height: 0px !important;
-            padding: 0 !important;
-            overflow: hidden !important;
-          }
-
-          /* Controls: scrollable */
-          .controls-panel {
-            flex: 1 !important;
+            flex: 1 1 auto !important;
             overflow-y: auto !important;
+            overflow-x: hidden !important;
+          }
+
+          /* Editor split: column, natural height */
+          .editor-split {
+            height: auto !important;
+            overflow: visible !important;
+          }
+
+          /* Canvas: auto-sized, maintains aspect ratio */
+          .canvas-wrapper {
+            padding: 12px !important;
+          }
+          .canvas-wrapper canvas {
+            max-width: 100% !important;
+            max-height: none !important;
+            width: auto !important;
+            height: auto !important;
+          }
+
+          /* Controls: natural height, no scrolling container */
+          .controls-panel {
             padding: 12px !important;
             gap: 12px !important;
-          }
-          .controls-panel.controls-hidden {
-            display: none !important;
+            overflow: visible !important;
           }
           .controls-panel > div {
             flex: 1 1 100% !important;
             min-width: unset !important;
           }
 
-          /* Mobile divider bar - always visible on mobile when template selected */
-          .mobile-divider-bar {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            gap: 8px !important;
-            height: 36px !important;
-            flex-shrink: 0 !important;
-            background: var(--surface) !important;
-            border-top: 1px solid var(--border) !important;
-            border-bottom: 1px solid var(--border) !important;
-            padding: 0 8px !important;
-          }
-          .divider-btn {
-            padding: 4px 14px !important;
-            border-radius: 20px !important;
-            border: 1px solid var(--border) !important;
-            background: var(--bg) !important;
-            color: var(--text) !important;
-            font-size: 12px !important;
-            font-weight: 600 !important;
-            cursor: pointer !important;
-            transition: background 0.15s !important;
-            white-space: nowrap !important;
-          }
-          .divider-btn:active {
-            background: var(--surface2) !important;
-          }
-          .divider-download-btn {
-            padding: 4px 14px !important;
-            border-radius: 20px !important;
-            border: none !important;
-            background: var(--accent) !important;
-            color: var(--bg) !important;
-            font-size: 12px !important;
-            font-weight: 700 !important;
-            cursor: pointer !important;
-            transition: opacity 0.15s !important;
-            white-space: nowrap !important;
-          }
-          .divider-download-btn:active {
-            opacity: 0.8 !important;
-          }
-
-          /* Download button full-width in controls */
+          /* Download button full-width */
           .download-wrapper {
             flex: 1 1 100% !important;
             margin-left: 0 !important;
@@ -1016,25 +918,19 @@ export function MemeEditor() {
           .search-bar-hidden {
             display: block !important;
           }
-          .mobile-divider-bar {
-            display: none !important;
-          }
-          .controls-panel.controls-hidden {
-            display: flex !important;
-          }
 
           /* Desktop editor: canvas left (60%), controls right (40%) */
           .editor-split {
             flex-direction: row !important;
             align-items: stretch !important;
+            height: 100% !important;
           }
-          .canvas-wrapper.canvas-split,
-          .canvas-wrapper.canvas-preview,
-          .canvas-wrapper.canvas-editor {
+          .canvas-wrapper {
             flex: 3 !important;
             max-height: none !important;
             padding: 16px !important;
             align-self: stretch !important;
+            min-height: 0 !important;
           }
           .canvas-wrapper canvas {
             max-width: 100% !important;
