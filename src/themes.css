@@ -40,3 +40,17 @@
   --danger: #c17f59;
   --success: #a0c878;
 }
+
+/* Gruvbox theme */
+[data-theme="gruvbox"] {
+  --bg: #282828;
+  --surface: #3c3836;
+  --surface2: #504945;
+  --accent: #fb4934;
+  --accent2: #fe8019;
+  --text: #ebdbb2;
+  --text-muted: #d5c4a1;
+  --border: #504945;
+  --danger: #fabd2f;
+  --success: #b8bb26;
+}
