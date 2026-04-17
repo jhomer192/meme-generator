@@ -1022,15 +1022,43 @@ export function MemeEditor() {
           .controls-panel.controls-hidden {
             display: flex !important;
           }
+
+          /* Desktop editor: canvas left (60%), controls right (40%) */
+          .editor-split {
+            flex-direction: row !important;
+            align-items: stretch !important;
+          }
           .canvas-wrapper.canvas-split,
           .canvas-wrapper.canvas-preview,
           .canvas-wrapper.canvas-editor {
-            flex: 1 !important;
+            flex: 3 !important;
             max-height: none !important;
             padding: 16px !important;
+            align-self: stretch !important;
           }
           .canvas-wrapper canvas {
-            max-height: calc(100vh - 280px) !important;
+            max-width: 100% !important;
+            max-height: calc(100vh - 120px) !important;
+          }
+          .controls-panel {
+            flex: 2 !important;
+            max-height: none !important;
+            overflow-y: auto !important;
+            border-top: none !important;
+            border-left: 1px solid var(--border) !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            padding: 20px !important;
+          }
+          .controls-panel > div {
+            flex: 0 0 auto !important;
+          }
+          .download-wrapper {
+            margin-left: 0 !important;
+            margin-top: 8px !important;
+          }
+          .download-btn {
+            width: 100% !important;
           }
         }
       `}</style>
