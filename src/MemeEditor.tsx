@@ -260,7 +260,7 @@ export function MemeEditor() {
   });
 
   return (
-    <div style={{ display: 'flex', flex: 1, gap: 0, minHeight: 0 }}>
+    <div className="meme-layout" style={{ display: 'flex', flex: 1, gap: 0, minHeight: 0 }}>
       {/* Template Picker */}
       <aside
         style={{
@@ -294,6 +294,7 @@ export function MemeEditor() {
         </div>
 
         <div
+          className="template-grid"
           style={{
             flex: 1,
             overflowY: 'auto',
@@ -392,7 +393,7 @@ export function MemeEditor() {
       </aside>
 
       {/* Editor Area */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'auto' }}>
+      <main className="meme-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'auto' }}>
         {!selected ? (
           <div
             style={{
@@ -587,15 +588,23 @@ export function MemeEditor() {
           50% { opacity: 0.4; }
         }
         @media (max-width: 640px) {
+          .meme-layout {
+            flex-direction: column !important;
+          }
           .template-panel {
             width: 100% !important;
             min-width: unset !important;
             border-right: none !important;
             border-bottom: 1px solid var(--border) !important;
-            max-height: 200px;
+            max-height: 260px;
+            flex-shrink: 0 !important;
           }
-          .template-panel > div:nth-child(2) {
-            grid-template-columns: repeat(5, 1fr) !important;
+          .template-panel .template-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .meme-main {
+            min-height: 0;
+            flex: 1 1 0 !important;
           }
         }
       `}</style>
