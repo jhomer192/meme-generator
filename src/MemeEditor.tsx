@@ -67,7 +67,7 @@ function drawTextBoxes(
       ctx.lineWidth = scaledFont / 8;
       ctx.lineJoin = 'round';
       ctx.strokeText(text, x, y, canvasWidth - 20);
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = box.color;
     } else {
       ctx.fillStyle = box.color;
     }
