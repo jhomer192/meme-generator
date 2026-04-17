@@ -90,6 +90,7 @@ export function MemeEditor() {
   const [posMode, setPosMode] = useState<PositionMode>('classic');
   const [topPos, setTopPos] = useState({ x: 0.5, y: 0.05 });
   const [bottomPos, setBottomPos] = useState({ x: 0.5, y: 0.95 });
+  const [carouselCollapsed, setCarouselCollapsed] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -137,6 +138,11 @@ export function MemeEditor() {
     setTopPos({ x: 0.5, y: 0.05 });
     setBottomPos({ x: 0.5, y: 0.95 });
 
+    // Auto-collapse carousel on mobile after selecting a template
+    if (isMobile()) {
+      setCarouselCollapsed(true);
+    }
+
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
@@ -146,13 +152,6 @@ export function MemeEditor() {
         canvas.height = tmpl.height;
       }
       setLoadedImg(img);
-
-      // Auto-scroll to editor on mobile after template loads
-      if (isMobile() && editorRef.current) {
-        setTimeout(() => {
-          editorRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-      }
     };
     img.src = tmpl.url;
   }, []);
@@ -284,8 +283,8 @@ export function MemeEditor() {
         }}
         className="template-panel"
       >
-        {/* Search bar - sticky on mobile */}
-        <div className="search-bar-wrapper" style={{ padding: '12px 12px 8px', borderBottom: '1px solid var(--border)' }}>
+        {/* Search bar - sticky on mobile, hidden when collapsed */}
+        <div className={`search-bar-wrapper${carouselCollapsed ? ' search-bar-hidden' : ''}`} style={{ padding: '12px 12px 8px', borderBottom: '1px solid var(--border)' }}>
           <input
             type="text"
             placeholder="Search templates..."
@@ -401,125 +400,187 @@ export function MemeEditor() {
 
         {/* Mobile carousel */}
         <div className="template-carousel-wrap" style={{ display: 'none', flexDirection: 'column' }}>
-          <div
-            className="template-carousel"
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-              overflowX: 'auto',
-              scrollSnapType: 'x mandatory',
-              WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
-              scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
-              gap: 12,
-              padding: '10px 7.5vw',
-            }}
-          >
-            {/* Upload card */}
+          {/* Collapsed bar: shown on mobile when a template is selected and carousel is collapsed */}
+          {carouselCollapsed && selected && (
             <div
-              onClick={() => fileInputRef.current?.click()}
-              className="carousel-card"
+              className="carousel-collapsed-bar"
               style={{
-                flexShrink: 0,
-                width: '85vw',
-                scrollSnapAlign: 'center',
-                background: 'var(--bg)',
-                border: '2px dashed var(--border)',
-                borderRadius: 12,
-                cursor: 'pointer',
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'center',
-                height: 200,
-                gap: 8,
+                gap: 10,
+                padding: '0 12px',
+                height: 48,
+                borderBottom: '1px solid var(--border)',
+                background: 'var(--surface)',
+                flexShrink: 0,
               }}
             >
-              <span style={{ fontSize: 36, color: 'var(--text-muted)' }}>+</span>
-              <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500 }}>Upload your own image</span>
+              <img
+                src={selected.url}
+                alt={selected.name}
+                style={{
+                  width: 40,
+                  height: 30,
+                  objectFit: 'cover',
+                  borderRadius: 4,
+                  flexShrink: 0,
+                  border: '1px solid var(--border)',
+                }}
+              />
+              <span
+                style={{
+                  flex: 1,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: 'var(--text)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {selected.name}
+              </span>
+              <button
+                onClick={() => setCarouselCollapsed(false)}
+                style={{
+                  flexShrink: 0,
+                  padding: '5px 12px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: 'var(--accent)',
+                  color: 'var(--bg)',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                Change
+              </button>
             </div>
+          )}
 
-            {loading
-              ? Array.from({ length: 6 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="carousel-card"
-                    style={{
-                      flexShrink: 0,
-                      width: '85vw',
-                      scrollSnapAlign: 'center',
-                      background: 'var(--surface2)',
-                      borderRadius: 12,
-                      height: 230,
-                      animation: 'pulse 1.5s ease-in-out infinite',
-                    }}
-                  />
-                ))
-              : displayList.map((tmpl) => (
-                  <div
-                    key={tmpl.id}
-                    className="carousel-card"
-                    onClick={() => loadTemplate(tmpl)}
-                    style={{
-                      flexShrink: 0,
-                      width: '85vw',
-                      scrollSnapAlign: 'center',
-                      background: 'var(--surface)',
-                      border: selected?.id === tmpl.id ? '2px solid var(--accent)' : '2px solid var(--border)',
-                      borderRadius: 12,
-                      cursor: 'pointer',
-                      overflow: 'hidden',
-                      position: 'relative',
-                      transition: 'border-color 0.15s',
-                    }}
-                  >
-                    <img
-                      src={tmpl.url}
-                      alt={tmpl.name}
-                      loading="lazy"
+          {/* Full carousel: hidden when collapsed */}
+          {!carouselCollapsed && (
+            <div
+              className="template-carousel"
+              style={{
+                display: 'flex',
+                flexDirection: 'row',
+                overflowX: 'auto',
+                scrollSnapType: 'x mandatory',
+                WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
+                scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
+                gap: 12,
+                padding: '10px 7.5vw',
+              }}
+            >
+              {/* Upload card */}
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="carousel-card"
+                style={{
+                  flexShrink: 0,
+                  width: '85vw',
+                  scrollSnapAlign: 'center',
+                  background: 'var(--bg)',
+                  border: '2px dashed var(--border)',
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: 200,
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontSize: 36, color: 'var(--text-muted)' }}>+</span>
+                <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500 }}>Upload your own image</span>
+              </div>
+
+              {loading
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="carousel-card"
                       style={{
-                        width: '100%',
-                        height: 200,
-                        objectFit: 'cover',
-                        display: 'block',
+                        flexShrink: 0,
+                        width: '85vw',
+                        scrollSnapAlign: 'center',
+                        background: 'var(--surface2)',
+                        borderRadius: 12,
+                        height: 230,
+                        animation: 'pulse 1.5s ease-in-out infinite',
                       }}
                     />
-                    {selected?.id === tmpl.id && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: 8,
-                          right: 8,
-                          width: 28,
-                          height: 28,
-                          borderRadius: '50%',
-                          background: 'var(--accent)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 16,
-                          color: 'var(--bg)',
-                          fontWeight: 700,
-                        }}
-                      >
-                        ✓
-                      </div>
-                    )}
+                  ))
+                : displayList.map((tmpl) => (
                     <div
+                      key={tmpl.id}
+                      className="carousel-card"
+                      onClick={() => loadTemplate(tmpl)}
                       style={{
-                        padding: '8px 10px',
-                        fontSize: 13,
-                        fontWeight: selected?.id === tmpl.id ? 600 : 400,
-                        color: selected?.id === tmpl.id ? 'var(--accent)' : 'var(--text)',
-                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        width: '85vw',
+                        scrollSnapAlign: 'center',
+                        background: 'var(--surface)',
+                        border: selected?.id === tmpl.id ? '2px solid var(--accent)' : '2px solid var(--border)',
+                        borderRadius: 12,
+                        cursor: 'pointer',
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis',
+                        position: 'relative',
+                        transition: 'border-color 0.15s',
                       }}
                     >
-                      {tmpl.name}
+                      <img
+                        src={tmpl.url}
+                        alt={tmpl.name}
+                        loading="lazy"
+                        style={{
+                          width: '100%',
+                          height: 200,
+                          objectFit: 'cover',
+                          display: 'block',
+                        }}
+                      />
+                      {selected?.id === tmpl.id && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                            width: 28,
+                            height: 28,
+                            borderRadius: '50%',
+                            background: 'var(--accent)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 16,
+                            color: 'var(--bg)',
+                            fontWeight: 700,
+                          }}
+                        >
+                          ✓
+                        </div>
+                      )}
+                      <div
+                        style={{
+                          padding: '8px 10px',
+                          fontSize: 13,
+                          fontWeight: selected?.id === tmpl.id ? 600 : 400,
+                          color: selected?.id === tmpl.id ? 'var(--accent)' : 'var(--text)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {tmpl.name}
+                      </div>
                     </div>
-                  </div>
-                ))}
-          </div>
+                  ))}
+            </div>
+          )}
         </div>
 
         {!loading && (
@@ -764,6 +825,16 @@ export function MemeEditor() {
             display: flex !important;
           }
 
+          /* Hide search bar when carousel is collapsed */
+          .search-bar-hidden {
+            display: none !important;
+          }
+
+          /* Collapsed bar visible on mobile only */
+          .carousel-collapsed-bar {
+            display: flex !important;
+          }
+
           /* Hide scrollbar in carousel */
           .template-carousel::-webkit-scrollbar {
             display: none !important;
@@ -834,6 +905,12 @@ export function MemeEditor() {
           }
           .template-grid {
             display: grid !important;
+          }
+          .carousel-collapsed-bar {
+            display: none !important;
+          }
+          .search-bar-hidden {
+            display: block !important;
           }
         }
       `}</style>
