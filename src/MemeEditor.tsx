@@ -735,17 +735,22 @@ export function MemeEditor() {
         @media (max-width: 639px) {
           .meme-layout {
             flex-direction: column !important;
+            width: 100% !important;
+            max-width: 100vw !important;
+            overflow-x: hidden !important;
           }
 
           /* Template panel: full-width, fixed height, no right border */
           .template-panel {
-            width: 100% !important;
-            min-width: unset !important;
+            width: 100vw !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
             border-right: none !important;
             border-bottom: 1px solid var(--border) !important;
             max-height: 50vh !important;
             min-height: 260px !important;
             flex-shrink: 0 !important;
+            box-sizing: border-box !important;
           }
 
           /* Search bar sticky at top of panel */
