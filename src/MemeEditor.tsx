@@ -399,127 +399,127 @@ export function MemeEditor() {
               ))}
         </div>
 
-        {/* Mobile list */}
-        <div className="template-list" style={{ display: 'none', flex: 1, overflowY: 'auto' }}>
-          {/* Upload row */}
+        {/* Mobile carousel */}
+        <div className="template-carousel-wrap" style={{ display: 'none', flexDirection: 'column' }}>
           <div
-            onClick={() => fileInputRef.current?.click()}
-            className="template-row"
+            className="template-carousel"
             style={{
               display: 'flex',
-              alignItems: 'center',
+              flexDirection: 'row',
+              overflowX: 'auto',
+              scrollSnapType: 'x mandatory',
+              WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
+              scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
               gap: 12,
-              padding: '8px 12px',
-              minHeight: 56,
-              cursor: 'pointer',
-              borderBottom: '1px solid var(--border)',
-              background: 'var(--bg)',
+              padding: '10px 7.5vw',
             }}
           >
+            {/* Upload card */}
             <div
+              onClick={() => fileInputRef.current?.click()}
+              className="carousel-card"
               style={{
-                width: 80,
-                height: 60,
                 flexShrink: 0,
+                width: '85vw',
+                scrollSnapAlign: 'center',
+                background: 'var(--bg)',
                 border: '2px dashed var(--border)',
-                borderRadius: 6,
+                borderRadius: 12,
+                cursor: 'pointer',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 24,
-                color: 'var(--text-muted)',
+                height: 200,
+                gap: 8,
               }}
             >
-              +
+              <span style={{ fontSize: 36, color: 'var(--text-muted)' }}>+</span>
+              <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500 }}>Upload your own image</span>
             </div>
-            <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500 }}>Upload your own image</span>
-          </div>
 
-          {loading
-            ? Array.from({ length: 8 }).map((_, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: '8px 12px',
-                    minHeight: 56,
-                    borderBottom: '1px solid var(--border)',
-                  }}
-                >
+            {loading
+              ? Array.from({ length: 6 }).map((_, i) => (
                   <div
+                    key={i}
+                    className="carousel-card"
                     style={{
-                      width: 80,
-                      height: 60,
                       flexShrink: 0,
+                      width: '85vw',
+                      scrollSnapAlign: 'center',
                       background: 'var(--surface2)',
-                      borderRadius: 6,
+                      borderRadius: 12,
+                      height: 230,
                       animation: 'pulse 1.5s ease-in-out infinite',
                     }}
                   />
+                ))
+              : displayList.map((tmpl) => (
                   <div
+                    key={tmpl.id}
+                    className="carousel-card"
+                    onClick={() => loadTemplate(tmpl)}
                     style={{
-                      flex: 1,
-                      height: 16,
-                      background: 'var(--surface2)',
-                      borderRadius: 4,
-                      animation: 'pulse 1.5s ease-in-out infinite',
-                    }}
-                  />
-                </div>
-              ))
-            : displayList.map((tmpl) => (
-                <div
-                  key={tmpl.id}
-                  className="template-row"
-                  onClick={() => loadTemplate(tmpl)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: '8px 12px',
-                    minHeight: 56,
-                    cursor: 'pointer',
-                    borderBottom: '1px solid var(--border)',
-                    background: selected?.id === tmpl.id ? 'var(--accent-subtle, color-mix(in srgb, var(--accent) 15%, transparent))' : 'var(--surface)',
-                    transition: 'background 0.15s',
-                  }}
-                >
-                  <img
-                    src={tmpl.url}
-                    alt={tmpl.name}
-                    loading="lazy"
-                    style={{
-                      width: 80,
-                      height: 60,
                       flexShrink: 0,
-                      objectFit: 'cover',
-                      borderRadius: 6,
-                      border: selected?.id === tmpl.id ? '2px solid var(--accent)' : '2px solid transparent',
-                    }}
-                  />
-                  <span
-                    style={{
-                      flex: 1,
-                      fontSize: 14,
-                      fontWeight: selected?.id === tmpl.id ? 600 : 400,
-                      color: selected?.id === tmpl.id ? 'var(--accent)' : 'var(--text)',
+                      width: '85vw',
+                      scrollSnapAlign: 'center',
+                      background: 'var(--surface)',
+                      border: selected?.id === tmpl.id ? '2px solid var(--accent)' : '2px solid var(--border)',
+                      borderRadius: 12,
+                      cursor: 'pointer',
                       overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      position: 'relative',
+                      transition: 'border-color 0.15s',
                     }}
                   >
-                    {recent.includes(tmpl.id) && !search && (
-                      <span style={{ color: 'var(--accent)', marginRight: 4 }}>*</span>
+                    <img
+                      src={tmpl.url}
+                      alt={tmpl.name}
+                      loading="lazy"
+                      style={{
+                        width: '100%',
+                        height: 200,
+                        objectFit: 'cover',
+                        display: 'block',
+                      }}
+                    />
+                    {selected?.id === tmpl.id && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          width: 28,
+                          height: 28,
+                          borderRadius: '50%',
+                          background: 'var(--accent)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 16,
+                          color: 'var(--bg)',
+                          fontWeight: 700,
+                        }}
+                      >
+                        ✓
+                      </div>
                     )}
-                    {tmpl.name}
-                  </span>
-                  {selected?.id === tmpl.id && (
-                    <span style={{ color: 'var(--accent)', fontSize: 18, flexShrink: 0, fontWeight: 700 }}>✓</span>
-                  )}
-                </div>
-              ))}
+                    <div
+                      style={{
+                        padding: '8px 10px',
+                        fontSize: 13,
+                        fontWeight: selected?.id === tmpl.id ? 600 : 400,
+                        color: selected?.id === tmpl.id ? 'var(--accent)' : 'var(--text)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {tmpl.name}
+                    </div>
+                  </div>
+                ))}
+          </div>
         </div>
 
         {!loading && (
@@ -740,39 +740,38 @@ export function MemeEditor() {
             overflow-x: hidden !important;
           }
 
-          /* Template panel: full-width, fixed height, no right border */
+          /* Template panel: full-width, auto height for carousel */
           .template-panel {
             width: 100vw !important;
             max-width: 100% !important;
             min-width: 0 !important;
             border-right: none !important;
             border-bottom: 1px solid var(--border) !important;
-            max-height: 50vh !important;
-            min-height: 260px !important;
             flex-shrink: 0 !important;
             box-sizing: border-box !important;
           }
 
-          /* Search bar sticky at top of panel */
+          /* Search bar above carousel */
           .search-bar-wrapper {
-            position: sticky !important;
-            top: 0 !important;
-            z-index: 10 !important;
-            background: var(--surface) !important;
             padding: 10px 12px 8px !important;
           }
 
-          /* Hide desktop grid, show mobile list */
+          /* Hide desktop grid, show mobile carousel */
           .template-grid {
             display: none !important;
           }
-          .template-list {
-            display: block !important;
+          .template-carousel-wrap {
+            display: flex !important;
           }
 
-          /* Tap target active state */
-          .template-row:active {
-            background: color-mix(in srgb, var(--accent) 10%, var(--surface)) !important;
+          /* Hide scrollbar in carousel */
+          .template-carousel::-webkit-scrollbar {
+            display: none !important;
+          }
+
+          /* Card active press feedback */
+          .carousel-card:active {
+            opacity: 0.85 !important;
           }
 
           /* Editor area below templates */
@@ -830,7 +829,7 @@ export function MemeEditor() {
 
         /* Desktop: >= 640px */
         @media (min-width: 640px) {
-          .template-list {
+          .template-carousel-wrap {
             display: none !important;
           }
           .template-grid {
