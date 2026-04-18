@@ -118,28 +118,17 @@ export function MemeEditor() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Apply canvas dimensions whenever the image or dims change.
-  // This runs after React has committed the canvas to the DOM (which only
-  // happens after `selected` is set), so canvasRef.current is guaranteed
-  // to be non-null here — unlike inside an onload callback.
+  // Apply canvas dimensions AND redraw in a single effect to avoid race conditions.
+  // Both must happen in order: set dims first, then draw the image.
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !canvasDims) return;
+    if (!canvas || !canvasDims || !loadedImg) return;
+    // Set dimensions (this clears the canvas)
     canvas.width = canvasDims.w;
     canvas.height = canvasDims.h;
-  }, [canvasDims]);
-
-  const redraw = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !loadedImg) return;
+    // Draw immediately after setting dimensions
     drawMeme(canvas, loadedImg, textBoxes);
-  // canvasDims in deps ensures redraw runs after dimensions are applied
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadedImg, textBoxes, canvasDims]);
-
-  useEffect(() => {
-    redraw();
-  }, [redraw]);
+  }, [canvasDims, loadedImg, textBoxes]);
 
   const isMobile = () => window.innerWidth < 640;
 
@@ -156,11 +145,18 @@ export function MemeEditor() {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      // Don't touch canvasRef here — the canvas may not be in the DOM yet
-      // (it only renders after `selected` state causes a re-render).
-      // Store dims in state; a useEffect will apply them once the canvas mounts.
       setCanvasDims({ w: tmpl.width, h: tmpl.height });
       setLoadedImg(img);
+    };
+    img.onerror = () => {
+      // Retry without crossOrigin if CORS fails (canvas will be tainted
+      // but at least the image will display; download uses toBlob fallback)
+      const fallback = new Image();
+      fallback.onload = () => {
+        setCanvasDims({ w: tmpl.width, h: tmpl.height });
+        setLoadedImg(fallback);
+      };
+      fallback.src = tmpl.url;
     };
     img.src = tmpl.url;
   }, []);
