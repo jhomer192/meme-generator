@@ -1,56 +1,55 @@
-/* Tokyo Night theme (default) */
-[data-theme="tokyo"],
-:root {
+/* Theme system -- CSS custom properties */
+
+html,
+html[data-theme='tokyo'] {
   --bg: #16161e;
   --surface: #1a1b26;
-  --surface2: #292e42;
+  --text: #a9b1d6;
+  --text-dim: #565f89;
   --accent: #73daca;
-  --accent2: #7aa2f7;
-  --text: #c0caf5;
-  --text-muted: #a9b1d6;
-  --border: #3b4261;
-  --danger: #f7768e;
-  --success: #9ece6a;
+  --accent-2: #7aa2f7;
+  --accent-3: #bb9af7;
+  --border: #292e42;
+  /* Aliases for backward compat */
+  --surface2: #292e42;
+  --text-muted: #565f89;
 }
 
-/* Miami theme */
-[data-theme="miami"] {
+html[data-theme='miami'] {
   --bg: #0d0221;
-  --surface: #1a0a3e;
-  --surface2: #2d1b69;
+  --surface: #150535;
+  --text: #e0def4;
+  --text-dim: #908caa;
   --accent: #ff2d95;
-  --accent2: #00f0ff;
-  --text: #f0e6ff;
-  --text-muted: #c4b5d9;
-  --border: #3d2b7a;
-  --danger: #ff5aad;
-  --success: #f7ff00;
+  --accent-2: #00f0ff;
+  --accent-3: #ffe156;
+  --border: #2a1a4e;
+  --surface2: #2a1a4e;
+  --text-muted: #908caa;
 }
 
-/* Matcha theme */
-[data-theme="matcha"] {
+html[data-theme='matcha'] {
   --bg: #1c1a17;
-  --surface: #2a2722;
-  --surface2: #363229;
+  --surface: #252320;
+  --text: #d4be98;
+  --text-dim: #7c6f64;
   --accent: #8db660;
-  --accent2: #d4a852;
-  --text: #e8e0d0;
-  --text-muted: #bfb8a8;
-  --border: #4a4438;
-  --danger: #c17f59;
-  --success: #a0c878;
+  --accent-2: #d4be98;
+  --accent-3: #a9b665;
+  --border: #3c3836;
+  --surface2: #3c3836;
+  --text-muted: #7c6f64;
 }
 
-/* Gruvbox theme */
-[data-theme="gruvbox"] {
+html[data-theme='gruvbox'] {
   --bg: #282828;
   --surface: #3c3836;
-  --surface2: #504945;
-  --accent: #fb4934;
-  --accent2: #fe8019;
   --text: #ebdbb2;
-  --text-muted: #d5c4a1;
+  --text-dim: #928374;
+  --accent: #fb4934;
+  --accent-2: #fabd2f;
+  --accent-3: #b8bb26;
   --border: #504945;
-  --danger: #fabd2f;
-  --success: #b8bb26;
+  --surface2: #504945;
+  --text-muted: #928374;
 }

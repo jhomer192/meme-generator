@@ -6,12 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Meme Generator</title>
     <script>
-      (function() {
-        var old = ['mocha', 'tokyo-night', 'dracula', 'nord', 'forest'];
-        var stored = localStorage.getItem('site-theme');
-        document.documentElement.setAttribute('data-theme', (stored && old.indexOf(stored) === -1) ? stored : 'tokyo');
-      })();
-    </script>
+(function(){var s=localStorage.getItem('site-theme');if(s)document.documentElement.setAttribute('data-theme',s)})();
+</script>
   </head>
   <body>
     <div id="root"></div>
