@@ -3,7 +3,7 @@ import { MemeEditor } from './MemeEditor';
 
 export default function App() {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <header
         style={{
           display: 'flex',
@@ -25,7 +25,7 @@ export default function App() {
         <ThemePicker />
       </header>
 
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+      <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
         <MemeEditor />
       </div>
     </div>

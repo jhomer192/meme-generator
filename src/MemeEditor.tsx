@@ -351,585 +351,440 @@ export function MemeEditor() {
     transform: selected?.id === tmpl.id ? 'scale(1.03)' : 'scale(1)',
   });
 
-  return (
-    <div className="meme-layout" style={{ display: 'flex', flex: 1, gap: 0, minHeight: 0 }}>
-      {/* Template Picker */}
-      <aside
+  // Shared text box card renderer (used in both desktop right panel and mobile)
+  const renderTextBoxCards = () =>
+    textBoxes.map((box, idx) => (
+      <div
+        key={box.id}
+        onClick={() => setActiveBoxId(box.id)}
         style={{
-          width: 280,
-          minWidth: 220,
-          background: 'var(--surface)',
-          borderRight: '1px solid var(--border)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 0,
+          border: activeBoxId === box.id ? '2px solid var(--accent)' : '2px solid var(--border)',
+          borderRadius: 10,
+          padding: '10px 12px',
+          background: 'var(--bg)',
+          cursor: 'pointer',
+          transition: 'border-color 0.15s',
+          flexShrink: 0,
         }}
-        className="template-panel"
       >
-        <div className={`search-bar-wrapper${carouselCollapsed ? ' search-bar-hidden' : ''}`} style={{ padding: '12px 12px 8px', borderBottom: '1px solid var(--border)' }}>
-          <input
-            type="text"
-            placeholder="Search templates..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+        {/* Header row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', flex: 1 }}>
+            Text {idx + 1}
+          </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); deleteBox(box.id); }}
+            disabled={textBoxes.length <= 1}
+            title="Remove text box"
             style={{
-              width: '100%',
-              padding: '9px 12px',
-              borderRadius: 8,
-              border: '1px solid var(--border)',
-              background: 'var(--bg)',
-              color: 'var(--text)',
-              fontSize: 16,
-              outline: 'none',
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
-
-        {/* Desktop grid */}
-        <div
-          className="template-grid"
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: 10,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 6,
-            alignContent: 'start',
-          }}
-        >
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              background: 'var(--bg)',
-              border: '2px dashed var(--border)',
-              borderRadius: 8,
-              cursor: 'pointer',
+              width: 22,
+              height: 22,
+              borderRadius: 4,
+              border: 'none',
+              background: textBoxes.length <= 1 ? 'var(--surface2)' : '#e55',
+              color: textBoxes.length <= 1 ? 'var(--text-muted)' : '#fff',
+              cursor: textBoxes.length <= 1 ? 'not-allowed' : 'pointer',
+              fontSize: 13,
+              fontWeight: 700,
+              lineHeight: 1,
               display: 'flex',
-              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              minHeight: 70,
-              gap: 4,
-              fontSize: 11,
-              color: 'var(--text-muted)',
-              transition: 'border-color 0.15s',
+              flexShrink: 0,
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
           >
-            <span style={{ fontSize: 22 }}>+</span>
-            <span>Upload</span>
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handleFileUpload}
-          />
-
-          {loading
-            ? Array.from({ length: 11 }).map((_, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: 'var(--surface2)',
-                    borderRadius: 8,
-                    minHeight: 70,
-                    animation: 'pulse 1.5s ease-in-out infinite',
-                  }}
-                />
-              ))
-            : displayList.map((tmpl) => (
-                <div
-                  key={tmpl.id}
-                  style={cardStyle(tmpl)}
-                  onClick={() => loadTemplate(tmpl)}
-                  title={tmpl.name}
-                >
-                  <img
-                    src={tmpl.url}
-                    alt={tmpl.name}
-                    loading="lazy"
-                    style={{
-                      width: '100%',
-                      aspectRatio: '1',
-                      objectFit: 'cover',
-                      display: 'block',
-                    }}
-                  />
-                  <div
-                    style={{
-                      fontSize: 10,
-                      padding: '3px 4px',
-                      color: 'var(--text-muted)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {recent.includes(tmpl.id) && !search && (
-                      <span style={{ color: 'var(--accent)', marginRight: 3 }}>*</span>
-                    )}
-                    {tmpl.name}
-                  </div>
-                </div>
-              ))}
+            x
+          </button>
         </div>
 
-        {/* Mobile carousel */}
-        <div className="template-carousel-wrap" style={{ display: 'none', flexDirection: 'column' }}>
-          {carouselCollapsed && selected && (
-            <div
-              className="carousel-collapsed-bar"
+        {/* Text input */}
+        <input
+          type="text"
+          value={box.text}
+          onChange={(e) => updateBox(box.id, { text: e.target.value })}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
+          placeholder="Enter text..."
+          style={{ ...inputStyle, marginBottom: 8, fontSize: 15 }}
+        />
+
+        {/* Controls row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '1 1 120px', minWidth: 100 }}>
+            <label style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Size</label>
+            <input
+              type="range"
+              min={16}
+              max={96}
+              value={box.fontSize}
+              onChange={(e) => updateBox(box.id, { fontSize: Number(e.target.value) })}
+              onClick={(e) => e.stopPropagation()}
+              className="font-slider"
+              style={{ flex: 1, accentColor: 'var(--accent)' }}
+            />
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 26, textAlign: 'right' }}>
+              {box.fontSize}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <label style={{ fontSize: 11, color: 'var(--text-muted)' }}>Color</label>
+            <input
+              type="color"
+              value={box.color}
+              onChange={(e) => updateBox(box.id, { color: e.target.value })}
+              onClick={(e) => e.stopPropagation()}
+              title="Text color"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '0 12px',
-                height: 48,
-                borderBottom: '1px solid var(--border)',
-                background: 'var(--surface)',
+                width: 30,
+                height: 30,
+                cursor: 'pointer',
+                borderRadius: 6,
+                border: '1px solid var(--border)',
+                padding: 2,
+                background: 'var(--bg)',
+              }}
+            />
+          </div>
+
+          <div
+            style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}
+            onClick={(e) => { e.stopPropagation(); updateBox(box.id, { outline: !box.outline }); }}
+          >
+            <div
+              style={{
+                width: 32,
+                height: 18,
+                borderRadius: 9,
+                background: box.outline ? 'var(--accent)' : 'var(--surface2)',
+                position: 'relative',
+                transition: 'background 0.15s',
                 flexShrink: 0,
               }}
             >
-              <img
-                src={selected.url}
-                alt={selected.name}
+              <div
                 style={{
-                  width: 40,
-                  height: 30,
-                  objectFit: 'cover',
-                  borderRadius: 4,
-                  flexShrink: 0,
-                  border: '1px solid var(--border)',
+                  position: 'absolute',
+                  top: 2,
+                  left: box.outline ? 14 : 2,
+                  width: 14,
+                  height: 14,
+                  borderRadius: '50%',
+                  background: '#fff',
+                  transition: 'left 0.15s',
                 }}
               />
-              <span
-                style={{
-                  flex: 1,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: 'var(--text)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
+            </div>
+            <label style={{ fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer', userSelect: 'none' }}>
+              Outline
+            </label>
+          </div>
+        </div>
+      </div>
+    ));
+
+  const addTextButton = (
+    <button
+      onClick={addBox}
+      style={{
+        padding: '8px 0',
+        borderRadius: 8,
+        border: '2px dashed var(--border)',
+        background: 'transparent',
+        color: 'var(--text-muted)',
+        cursor: 'pointer',
+        fontSize: 13,
+        fontWeight: 600,
+        transition: 'border-color 0.15s, color 0.15s',
+        width: '100%',
+        flexShrink: 0,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = 'var(--accent)';
+        e.currentTarget.style.color = 'var(--accent)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = 'var(--border)';
+        e.currentTarget.style.color = 'var(--text-muted)';
+      }}
+    >
+      + Add text
+    </button>
+  );
+
+  const downloadButton = (
+    <button
+      onClick={handleDownload}
+      className="download-btn"
+      style={{
+        padding: '8px 22px',
+        borderRadius: 8,
+        border: 'none',
+        background: 'var(--accent)',
+        color: 'var(--bg)',
+        cursor: 'pointer',
+        fontSize: 15,
+        fontWeight: 700,
+        letterSpacing: 0.5,
+        transition: 'opacity 0.15s',
+        width: '100%',
+        flexShrink: 0,
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
+      onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+    >
+      Download
+    </button>
+  );
+
+  const canvasEl = (
+    <canvas
+      ref={canvasRef}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={{
+        maxWidth: '100%',
+        maxHeight: '100%',
+        objectFit: 'contain',
+        borderRadius: 8,
+        boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+        cursor: 'crosshair',
+        display: 'block',
+        touchAction: 'pan-y',
+      }}
+    />
+  );
+
+  return (
+    <>
+      {/* ===================== DESKTOP layout (>= 640px) ===================== */}
+      <div className="meme-layout-desktop">
+        {/* LEFT: Template sidebar — 280px, scrollable */}
+        <aside className="sidebar-left">
+          {/* Search — sticky at top */}
+          <div style={{ padding: '12px 12px 8px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+            <input
+              type="text"
+              placeholder="Search templates..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '9px 12px',
+                borderRadius: 8,
+                border: '1px solid var(--border)',
+                background: 'var(--bg)',
+                color: 'var(--text)',
+                fontSize: 14,
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+
+          {/* Template grid — scrollable */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: 10,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 6,
+              alignContent: 'start',
+            }}
+          >
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                background: 'var(--bg)',
+                border: '2px dashed var(--border)',
+                borderRadius: 8,
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 70,
+                gap: 4,
+                fontSize: 11,
+                color: 'var(--text-muted)',
+                transition: 'border-color 0.15s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
+            >
+              <span style={{ fontSize: 22 }}>+</span>
+              <span>Upload</span>
+            </div>
+            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileUpload} />
+
+            {loading
+              ? Array.from({ length: 11 }).map((_, i) => (
+                  <div key={i} style={{ background: 'var(--surface2)', borderRadius: 8, minHeight: 70, animation: 'pulse 1.5s ease-in-out infinite' }} />
+                ))
+              : displayList.map((tmpl) => (
+                  <div key={tmpl.id} style={cardStyle(tmpl)} onClick={() => loadTemplate(tmpl)} title={tmpl.name}>
+                    <img src={tmpl.url} alt={tmpl.name} loading="lazy" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
+                    <div style={{ fontSize: 10, padding: '3px 4px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {recent.includes(tmpl.id) && !search && <span style={{ color: 'var(--accent)', marginRight: 3 }}>*</span>}
+                      {tmpl.name}
+                    </div>
+                  </div>
+                ))}
+          </div>
+
+          {!loading && (
+            <div style={{ padding: '6px 12px', fontSize: 11, color: 'var(--text-muted)', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+              {displayList.length} templates
+            </div>
+          )}
+        </aside>
+
+        {/* CENTER: Canvas — flex 1, fills remaining space */}
+        <main ref={editorRef} style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', background: 'var(--bg)' }}>
+          {!selected ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', gap: 12, padding: 20, textAlign: 'center' }}>
+              <div style={{ fontSize: 64 }}>🎭</div>
+              <div style={{ fontSize: 20, fontWeight: 600 }}>Pick a template to get started</div>
+              <div style={{ fontSize: 14 }}>Choose from the list on the left, or upload your own image.</div>
+            </div>
+          ) : (
+            <>
+              {/* Canvas fills all available vertical space */}
+              <div
+                ref={containerRef}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, minHeight: 0, overflow: 'hidden' }}
               >
+                {canvasEl}
+              </div>
+              {/* Download — always visible below canvas, not scrollable */}
+              <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+                {downloadButton}
+              </div>
+            </>
+          )}
+        </main>
+
+        {/* RIGHT: Text controls — 300px, scrollable cards, sticky add button */}
+        {selected && (
+          <aside className="sidebar-right">
+            {/* Scrollable text box cards */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {renderTextBoxCards()}
+            </div>
+            {/* Sticky Add text button at bottom */}
+            <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+              {addTextButton}
+            </div>
+          </aside>
+        )}
+      </div>
+
+      {/* ===================== MOBILE layout (< 640px) ===================== */}
+      <div className="meme-layout-mobile">
+        {/* 1. Template picker — collapsible carousel */}
+        <div style={{ flexShrink: 0, background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+          {carouselCollapsed && selected ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px', height: 48 }}>
+              <img src={selected.url} alt={selected.name} style={{ width: 40, height: 30, objectFit: 'cover', borderRadius: 4, flexShrink: 0, border: '1px solid var(--border)' }} />
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {selected.name}
               </span>
               <button
                 onClick={() => setCarouselCollapsed(false)}
-                style={{
-                  flexShrink: 0,
-                  padding: '5px 12px',
-                  borderRadius: 6,
-                  border: 'none',
-                  background: 'var(--accent)',
-                  color: 'var(--bg)',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
+                style={{ flexShrink: 0, padding: '5px 12px', borderRadius: 6, border: 'none', background: 'var(--accent)', color: 'var(--bg)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
               >
                 Change
               </button>
             </div>
-          )}
-
-          {!carouselCollapsed && (
-            <div
-              className="template-carousel"
-              style={{
-                display: 'flex',
-                flexDirection: 'row',
-                overflowX: 'auto',
-                scrollSnapType: 'x mandatory',
-                WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
-                scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
-                gap: 12,
-                padding: '10px 7.5vw',
-              }}
-            >
+          ) : (
+            <>
+              <div style={{ padding: '10px 12px 8px' }}>
+                <input
+                  type="text"
+                  placeholder="Search templates..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileUpload} />
               <div
-                onClick={() => fileInputRef.current?.click()}
-                className="carousel-card"
                 style={{
-                  flexShrink: 0,
-                  width: '85vw',
-                  scrollSnapAlign: 'center',
-                  background: 'var(--bg)',
-                  border: '2px dashed var(--border)',
-                  borderRadius: 12,
-                  cursor: 'pointer',
                   display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: 200,
-                  gap: 8,
+                  flexDirection: 'row',
+                  overflowX: 'auto',
+                  scrollSnapType: 'x mandatory',
+                  WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
+                  scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
+                  gap: 12,
+                  padding: '8px 7.5vw 10px',
                 }}
               >
-                <span style={{ fontSize: 36, color: 'var(--text-muted)' }}>+</span>
-                <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500 }}>Upload your own image</span>
-              </div>
-
-              {loading
-                ? Array.from({ length: 6 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="carousel-card"
-                      style={{
-                        flexShrink: 0,
-                        width: '85vw',
-                        scrollSnapAlign: 'center',
-                        background: 'var(--surface2)',
-                        borderRadius: 12,
-                        height: 230,
-                        animation: 'pulse 1.5s ease-in-out infinite',
-                      }}
-                    />
-                  ))
-                : displayList.map((tmpl) => (
-                    <div
-                      key={tmpl.id}
-                      className="carousel-card"
-                      onClick={() => loadTemplate(tmpl)}
-                      style={{
-                        flexShrink: 0,
-                        width: '85vw',
-                        scrollSnapAlign: 'center',
-                        background: 'var(--surface)',
-                        border: selected?.id === tmpl.id ? '2px solid var(--accent)' : '2px solid var(--border)',
-                        borderRadius: 12,
-                        cursor: 'pointer',
-                        overflow: 'hidden',
-                        position: 'relative',
-                        transition: 'border-color 0.15s',
-                      }}
-                    >
-                      <img
-                        src={tmpl.url}
-                        alt={tmpl.name}
-                        loading="lazy"
-                        style={{
-                          width: '100%',
-                          height: 200,
-                          objectFit: 'cover',
-                          display: 'block',
-                        }}
-                      />
-                      {selected?.id === tmpl.id && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            width: 28,
-                            height: 28,
-                            borderRadius: '50%',
-                            background: 'var(--accent)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 16,
-                            color: 'var(--bg)',
-                            fontWeight: 700,
-                          }}
-                        >
-                          ✓
-                        </div>
-                      )}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ flexShrink: 0, width: '85vw', scrollSnapAlign: 'center', background: 'var(--bg)', border: '2px dashed var(--border)', borderRadius: 12, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 160, gap: 8 }}
+                >
+                  <span style={{ fontSize: 36, color: 'var(--text-muted)' }}>+</span>
+                  <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500 }}>Upload your own image</span>
+                </div>
+                {loading
+                  ? Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} style={{ flexShrink: 0, width: '85vw', scrollSnapAlign: 'center', background: 'var(--surface2)', borderRadius: 12, height: 190, animation: 'pulse 1.5s ease-in-out infinite' }} />
+                    ))
+                  : displayList.map((tmpl) => (
                       <div
-                        style={{
-                          padding: '8px 10px',
-                          fontSize: 13,
-                          fontWeight: selected?.id === tmpl.id ? 600 : 400,
-                          color: selected?.id === tmpl.id ? 'var(--accent)' : 'var(--text)',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
+                        key={tmpl.id}
+                        onClick={() => loadTemplate(tmpl)}
+                        style={{ flexShrink: 0, width: '85vw', scrollSnapAlign: 'center', background: 'var(--surface)', border: selected?.id === tmpl.id ? '2px solid var(--accent)' : '2px solid var(--border)', borderRadius: 12, cursor: 'pointer', overflow: 'hidden', position: 'relative', transition: 'border-color 0.15s' }}
                       >
-                        {tmpl.name}
+                        <img src={tmpl.url} alt={tmpl.name} loading="lazy" style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }} />
+                        {selected?.id === tmpl.id && (
+                          <div style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: 'var(--bg)', fontWeight: 700 }}>✓</div>
+                        )}
+                        <div style={{ padding: '6px 10px', fontSize: 12, fontWeight: selected?.id === tmpl.id ? 600 : 400, color: selected?.id === tmpl.id ? 'var(--accent)' : 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {tmpl.name}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-            </div>
+                    ))}
+              </div>
+            </>
           )}
         </div>
 
-        {!loading && (
-          <div style={{ padding: '6px 12px', fontSize: 11, color: 'var(--text-muted)', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
-            {displayList.length} templates
-          </div>
-        )}
-      </aside>
-
-      {/* Editor Area */}
-      <main ref={editorRef} className="meme-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'auto' }}>
-        {!selected ? (
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--text-muted)',
-              gap: 12,
-              padding: 20,
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ fontSize: 64 }}>🎭</div>
-            <div style={{ fontSize: 20, fontWeight: 600 }}>Pick a template to get started</div>
-            <div style={{ fontSize: 14 }}>Choose from the list above, or upload your own image.</div>
+        {/* 2. Canvas — max ~50vh */}
+        {selected ? (
+          <div ref={containerRef} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12, maxHeight: '50vh', overflow: 'hidden', background: 'var(--bg)' }}>
+            {canvasEl}
           </div>
         ) : (
-          <div className="editor-split" style={{ display: 'flex', flexDirection: 'column', gap: 0, height: '100%' }}>
-            {/* Canvas area */}
-            <div
-              ref={containerRef}
-              className="canvas-wrapper"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 16,
-                background: 'var(--bg)',
-              }}
-            >
-              <canvas
-                ref={canvasRef}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: 'calc(100vh - 280px)',
-                  objectFit: 'contain',
-                  borderRadius: 8,
-                  boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
-                  cursor: 'crosshair',
-                  display: 'block',
-                  touchAction: 'pan-y', // allow vertical scroll unless we preventDefault
-                }}
-              />
-            </div>
-
-            {/* Controls */}
-            <div
-              className="controls-panel"
-              style={{
-                borderTop: '1px solid var(--border)',
-                background: 'var(--surface)',
-                padding: '14px 20px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-              }}
-            >
-              {/* Text box cards */}
-              {textBoxes.map((box, idx) => (
-                <div
-                  key={box.id}
-                  onClick={() => setActiveBoxId(box.id)}
-                  style={{
-                    border: activeBoxId === box.id ? '2px solid var(--accent)' : '2px solid var(--border)',
-                    borderRadius: 10,
-                    padding: '10px 12px',
-                    background: 'var(--bg)',
-                    cursor: 'pointer',
-                    transition: 'border-color 0.15s',
-                  }}
-                >
-                  {/* Header row */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', flex: 1 }}>
-                      Text {idx + 1}
-                    </span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); deleteBox(box.id); }}
-                      disabled={textBoxes.length <= 1}
-                      title="Remove text box"
-                      style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 4,
-                        border: 'none',
-                        background: textBoxes.length <= 1 ? 'var(--surface2)' : '#e55',
-                        color: textBoxes.length <= 1 ? 'var(--text-muted)' : '#fff',
-                        cursor: textBoxes.length <= 1 ? 'not-allowed' : 'pointer',
-                        fontSize: 13,
-                        fontWeight: 700,
-                        lineHeight: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
-                      x
-                    </button>
-                  </div>
-
-                  {/* Text input */}
-                  <input
-                    type="text"
-                    value={box.text}
-                    onChange={(e) => updateBox(box.id, { text: e.target.value })}
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
-                    placeholder="Enter text..."
-                    style={{
-                      ...inputStyle,
-                      marginBottom: 8,
-                      fontSize: 15,
-                    }}
-                  />
-
-                  {/* Controls row */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    {/* Font size */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '1 1 120px', minWidth: 100 }}>
-                      <label style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                        Size
-                      </label>
-                      <input
-                        type="range"
-                        min={16}
-                        max={96}
-                        value={box.fontSize}
-                        onChange={(e) => updateBox(box.id, { fontSize: Number(e.target.value) })}
-                        onClick={(e) => e.stopPropagation()}
-                        className="font-slider"
-                        style={{ flex: 1, accentColor: 'var(--accent)' }}
-                      />
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 26, textAlign: 'right' }}>
-                        {box.fontSize}
-                      </span>
-                    </div>
-
-                    {/* Color picker */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <label style={{ fontSize: 11, color: 'var(--text-muted)' }}>Color</label>
-                      <input
-                        type="color"
-                        value={box.color}
-                        onChange={(e) => updateBox(box.id, { color: e.target.value })}
-                        onClick={(e) => e.stopPropagation()}
-                        title="Text color"
-                        style={{
-                          width: 30,
-                          height: 30,
-                          cursor: 'pointer',
-                          borderRadius: 6,
-                          border: '1px solid var(--border)',
-                          padding: 2,
-                          background: 'var(--bg)',
-                        }}
-                      />
-                    </div>
-
-                    {/* Outline toggle */}
-                    <div
-                      style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}
-                      onClick={(e) => { e.stopPropagation(); updateBox(box.id, { outline: !box.outline }); }}
-                    >
-                      <div
-                        style={{
-                          width: 32,
-                          height: 18,
-                          borderRadius: 9,
-                          background: box.outline ? 'var(--accent)' : 'var(--surface2)',
-                          position: 'relative',
-                          transition: 'background 0.15s',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: 2,
-                            left: box.outline ? 14 : 2,
-                            width: 14,
-                            height: 14,
-                            borderRadius: '50%',
-                            background: '#fff',
-                            transition: 'left 0.15s',
-                          }}
-                        />
-                      </div>
-                      <label style={{ fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer', userSelect: 'none' }}>
-                        Outline
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {/* Add text button */}
-              <button
-                onClick={addBox}
-                style={{
-                  padding: '8px 0',
-                  borderRadius: 8,
-                  border: '2px dashed var(--border)',
-                  background: 'transparent',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  transition: 'border-color 0.15s, color 0.15s',
-                  width: '100%',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--accent)';
-                  e.currentTarget.style.color = 'var(--accent)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--border)';
-                  e.currentTarget.style.color = 'var(--text-muted)';
-                }}
-              >
-                + Add text
-              </button>
-
-              {/* Download */}
-              <div className="download-wrapper" style={{ marginTop: 4 }}>
-                <button
-                  onClick={handleDownload}
-                  className="download-btn"
-                  style={{
-                    padding: '8px 22px',
-                    borderRadius: 8,
-                    border: 'none',
-                    background: 'var(--accent)',
-                    color: 'var(--bg)',
-                    cursor: 'pointer',
-                    fontSize: 15,
-                    fontWeight: 700,
-                    letterSpacing: 0.5,
-                    transition: 'opacity 0.15s',
-                    width: '100%',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
-                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
-                >
-                  Download
-                </button>
-              </div>
-            </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', gap: 12, padding: 20, textAlign: 'center' }}>
+            <div style={{ fontSize: 48 }}>🎭</div>
+            <div style={{ fontSize: 18, fontWeight: 600 }}>Pick a template to get started</div>
           </div>
         )}
-      </main>
+
+        {/* 3. Text controls — scrollable, max ~40vh */}
+        {selected && (
+          <div style={{ flexShrink: 0, maxHeight: '40vh', overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8, borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
+            {renderTextBoxCards()}
+            {addTextButton}
+          </div>
+        )}
+
+        {/* 4. Download — always visible, not inside scroll */}
+        {selected && (
+          <div style={{ flexShrink: 0, padding: '10px 12px', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
+            {downloadButton}
+          </div>
+        )}
+      </div>
 
       <style>{`
         @keyframes pulse {
@@ -937,153 +792,66 @@ export function MemeEditor() {
           50% { opacity: 0.4; }
         }
 
-        /* Mobile: < 640px */
-        @media (max-width: 639px) {
-          .meme-layout {
-            flex-direction: column !important;
-            width: 100% !important;
-            max-width: 100vw !important;
-            overflow-x: hidden !important;
-          }
+        /* Desktop layout */
+        .meme-layout-desktop {
+          display: none;
+        }
+        .meme-layout-mobile {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          overflow: hidden;
+        }
 
-          .template-panel {
-            width: 100vw !important;
-            max-width: 100% !important;
-            min-width: 0 !important;
-            border-right: none !important;
-            border-bottom: 1px solid var(--border) !important;
-            flex-shrink: 0 !important;
-            box-sizing: border-box !important;
+        @media (min-width: 640px) {
+          .meme-layout-desktop {
+            display: flex;
+            flex-direction: row;
+            flex: 1;
+            overflow: hidden;
+            min-height: 0;
           }
-
-          .search-bar-wrapper {
-            padding: 10px 12px 8px !important;
+          .meme-layout-mobile {
+            display: none;
           }
-
-          .template-grid {
-            display: none !important;
+          .sidebar-left {
+            width: 280px;
+            flex-shrink: 0;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
           }
-          .template-carousel-wrap {
-            display: flex !important;
-          }
-
-          .search-bar-hidden {
-            display: none !important;
-          }
-
-          .carousel-collapsed-bar {
-            display: flex !important;
-          }
-
-          .template-carousel::-webkit-scrollbar {
-            display: none !important;
-          }
-
-          .carousel-card:active {
-            opacity: 0.85 !important;
-          }
-
-          .meme-main {
-            flex: 1 1 auto !important;
-            overflow-y: auto !important;
-            overflow-x: hidden !important;
-          }
-
-          .editor-split {
-            height: auto !important;
-            overflow: visible !important;
-          }
-
-          .canvas-wrapper {
-            padding: 12px !important;
-          }
-          .canvas-wrapper canvas {
-            max-width: 100% !important;
-            max-height: none !important;
-            width: auto !important;
-            height: auto !important;
-          }
-
-          .controls-panel {
-            padding: 12px !important;
-            gap: 10px !important;
-            overflow: visible !important;
-          }
-
-          .download-wrapper {
-            margin-left: 0 !important;
-          }
-          .download-btn {
-            width: 100% !important;
-            padding: 14px !important;
-            font-size: 17px !important;
-          }
-
-          .font-slider {
-            height: 24px !important;
-            cursor: pointer !important;
-          }
-          .font-slider::-webkit-slider-thumb {
-            width: 28px !important;
-            height: 28px !important;
-          }
-          .font-slider::-moz-range-thumb {
-            width: 28px !important;
-            height: 28px !important;
+          .sidebar-right {
+            width: 300px;
+            flex-shrink: 0;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
           }
         }
 
-        /* Desktop: >= 640px */
-        @media (min-width: 640px) {
-          .template-carousel-wrap {
-            display: none !important;
+        .font-slider {
+          cursor: pointer;
+        }
+        @media (max-width: 639px) {
+          .font-slider {
+            height: 24px;
           }
-          .template-grid {
-            display: grid !important;
+          .font-slider::-webkit-slider-thumb {
+            width: 28px;
+            height: 28px;
           }
-          .carousel-collapsed-bar {
-            display: none !important;
-          }
-          .search-bar-hidden {
-            display: block !important;
-          }
-
-          .editor-split {
-            flex-direction: row !important;
-            align-items: stretch !important;
-            height: 100% !important;
-          }
-          .canvas-wrapper {
-            flex: 3 !important;
-            max-height: none !important;
-            padding: 16px !important;
-            align-self: stretch !important;
-            min-height: 0 !important;
-          }
-          .canvas-wrapper canvas {
-            max-width: 100% !important;
-            max-height: calc(100vh - 120px) !important;
-          }
-          .controls-panel {
-            flex: 2 !important;
-            max-height: none !important;
-            overflow-y: auto !important;
-            border-top: none !important;
-            border-left: 1px solid var(--border) !important;
-            flex-direction: column !important;
-            align-items: stretch !important;
-            padding: 16px !important;
-          }
-          .download-wrapper {
-            margin-left: 0 !important;
-            margin-top: 4px !important;
-          }
-          .download-btn {
-            width: 100% !important;
+          .font-slider::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
           }
         }
       `}</style>
-    </div>
+    </>
   );
 }
 
