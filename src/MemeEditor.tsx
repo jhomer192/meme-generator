@@ -20,6 +20,7 @@ interface TextBox {
   fontSize: number; // px at canvas resolution
   color: string;
   outline: boolean;
+  textAlign: 'left' | 'center' | 'right';
 }
 
 const RECENT_KEY = 'meme-recent-ids';
@@ -40,8 +41,8 @@ function pushRecent(id: string) {
 
 function makeDefaultBoxes(): TextBox[] {
   return [
-    { id: uid(), text: '', x: 0.5, y: 0.08, fontSize: 48, color: '#ffffff', outline: true },
-    { id: uid(), text: '', x: 0.5, y: 0.92, fontSize: 48, color: '#ffffff', outline: true },
+    { id: uid(), text: '', x: 0.5, y: 0.08, fontSize: 48, color: '#ffffff', outline: true, textAlign: 'center' },
+    { id: uid(), text: '', x: 0.5, y: 0.92, fontSize: 48, color: '#ffffff', outline: true, textAlign: 'center' },
   ];
 }
 
@@ -51,27 +52,38 @@ function drawTextBoxes(
   canvasWidth: number,
   canvasHeight: number
 ) {
-  ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
   for (const box of boxes) {
     if (!box.text.trim()) continue;
     const scaledFont = Math.round(box.fontSize * (canvasWidth / 500));
     ctx.font = `900 ${scaledFont}px Impact, "Arial Black", sans-serif`;
-    const text = box.text.toUpperCase();
-    const x = box.x * canvasWidth;
-    const y = box.y * canvasHeight;
+    ctx.textAlign = box.textAlign;
 
-    if (box.outline) {
-      ctx.strokeStyle = 'black';
-      ctx.lineWidth = scaledFont / 8;
-      ctx.lineJoin = 'round';
-      ctx.strokeText(text, x, y, canvasWidth - 20);
-      ctx.fillStyle = box.color;
-    } else {
-      ctx.fillStyle = box.color;
+    const lines = box.text.split('\n').map((l) => l.toUpperCase());
+    const lineHeight = scaledFont * 1.2;
+    const totalHeight = lineHeight * lines.length;
+    // Center the block of lines around the y position
+    const startY = box.y * canvasHeight - totalHeight / 2 + lineHeight / 2;
+
+    const x = box.x * canvasWidth;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+      const ly = startY + i * lineHeight;
+
+      if (box.outline) {
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = scaledFont / 8;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(line, x, ly, canvasWidth - 20);
+        ctx.fillStyle = box.color;
+      } else {
+        ctx.fillStyle = box.color;
+      }
+      ctx.fillText(line, x, ly, canvasWidth - 20);
     }
-    ctx.fillText(text, x, y, canvasWidth - 20);
   }
 }
 
@@ -210,7 +222,7 @@ export function MemeEditor() {
     };
   };
 
-  // Hit test: find box within ~40px radius (in screen space)
+  // Hit test: find box within hit area (accounts for multiline text height)
   const hitTest = (clientX: number, clientY: number): string | null => {
     const canvas = canvasRef.current;
     if (!canvas || !loadedImg) return null;
@@ -222,9 +234,17 @@ export function MemeEditor() {
     // Test in reverse order (last = top-most rendered)
     for (let i = textBoxes.length - 1; i >= 0; i--) {
       const box = textBoxes[i];
+      const lines = box.text.split('\n');
+      const lineCount = Math.max(lines.length, 1);
+      const scaledFont = box.fontSize * (canvas.width / 500);
+      const lineHeight = scaledFont * 1.2;
+      const totalHeight = lineHeight * lineCount;
+      // Half the block height in normalized coords
+      const halfBlockNorm = (totalHeight / 2) / canvas.height;
+
       const dx = Math.abs(nx - box.x);
       const dy = Math.abs(ny - box.y);
-      if (dx < threshold * 3 && dy < threshold) {
+      if (dx < threshold * 3 && dy < halfBlockNorm + threshold) {
         return box.id;
       }
     }
@@ -308,6 +328,7 @@ export function MemeEditor() {
       fontSize: 48,
       color: '#ffffff',
       outline: true,
+      textAlign: 'center',
     };
     setTextBoxes((prev) => [...prev, newBox]);
     setActiveBoxId(newBox.id);
@@ -394,14 +415,13 @@ export function MemeEditor() {
         </div>
 
         {/* Text input */}
-        <input
-          type="text"
+        <textarea
           value={box.text}
           onChange={(e) => updateBox(box.id, { text: e.target.value })}
           onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
           placeholder="Enter text..."
-          style={{ ...inputStyle, marginBottom: 8, fontSize: 15 }}
+          rows={3}
+          style={{ ...inputStyle, marginBottom: 8, fontSize: 15, resize: 'vertical', lineHeight: 1.4 }}
         />
 
         {/* Controls row */}
@@ -474,6 +494,55 @@ export function MemeEditor() {
             <label style={{ fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer', userSelect: 'none' }}>
               Outline
             </label>
+          </div>
+
+          {/* Text alignment buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {(['left', 'center', 'right'] as const).map((align) => (
+              <button
+                key={align}
+                onClick={(e) => { e.stopPropagation(); updateBox(box.id, { textAlign: align }); }}
+                title={`Align ${align}`}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 5,
+                  border: 'none',
+                  background: box.textAlign === align ? 'var(--accent)' : 'var(--surface2)',
+                  color: box.textAlign === align ? 'var(--bg)' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 0,
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  {align === 'left' && (
+                    <>
+                      <rect x="1" y="2" width="12" height="1.5" rx="0.5" fill="currentColor" />
+                      <rect x="1" y="6" width="8" height="1.5" rx="0.5" fill="currentColor" />
+                      <rect x="1" y="10" width="10" height="1.5" rx="0.5" fill="currentColor" />
+                    </>
+                  )}
+                  {align === 'center' && (
+                    <>
+                      <rect x="1" y="2" width="12" height="1.5" rx="0.5" fill="currentColor" />
+                      <rect x="3" y="6" width="8" height="1.5" rx="0.5" fill="currentColor" />
+                      <rect x="2" y="10" width="10" height="1.5" rx="0.5" fill="currentColor" />
+                    </>
+                  )}
+                  {align === 'right' && (
+                    <>
+                      <rect x="1" y="2" width="12" height="1.5" rx="0.5" fill="currentColor" />
+                      <rect x="5" y="6" width="8" height="1.5" rx="0.5" fill="currentColor" />
+                      <rect x="3" y="10" width="10" height="1.5" rx="0.5" fill="currentColor" />
+                    </>
+                  )}
+                </svg>
+              </button>
+            ))}
           </div>
         </div>
       </div>
