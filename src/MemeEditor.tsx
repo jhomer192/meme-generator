@@ -109,6 +109,20 @@ export function MemeEditor() {
   const [textBoxes, setTextBoxes] = useState<TextBox[]>(makeDefaultBoxes());
   const [activeBoxId, setActiveBoxId] = useState<string | null>(null);
   const [carouselCollapsed, setCarouselCollapsed] = useState(false);
+  // Track viewport bucket in state, not just CSS. Both layouts share a single
+  // canvasRef via the `canvasEl` JSX -- if both layouts mount simultaneously,
+  // the ref flips to whichever mounted last, leaving the visible canvas
+  // unsized (stuck at the 300x150 HTML default). Rendering only one layout
+  // at a time keeps a single canvas in the tree.
+  const [isMobileView, setIsMobileView] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 640 : false,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const onChange = (e: MediaQueryListEvent) => setIsMobileView(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -366,6 +380,9 @@ export function MemeEditor() {
     overflow: 'hidden',
     transition: 'border-color 0.15s, transform 0.1s',
     transform: selected?.id === tmpl.id ? 'scale(1.03)' : 'scale(1)',
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
   });
 
   // Shared text box card renderer (used in both desktop right panel and mobile)
@@ -627,7 +644,12 @@ export function MemeEditor() {
 
   return (
     <>
-      {/* ===================== DESKTOP layout (>= 640px) ===================== */}
+      {/* ===================== DESKTOP layout (>= 640px) =====================
+          Only mounted when !isMobileView. Rendering both layouts at once
+          puts two <canvas> elements sharing canvasRef into the DOM; React
+          assigns the ref to whichever mounts last, leaving the visible
+          canvas unsized. */}
+      {!isMobileView && (
       <div className="meme-layout-desktop">
         {/* LEFT: Template sidebar — 280px, scrollable */}
         <aside className="sidebar-left">
@@ -652,7 +674,11 @@ export function MemeEditor() {
             />
           </div>
 
-          {/* Template grid — scrollable */}
+          {/* Template grid — scrollable.
+              `grid-auto-rows: 100px` sets each card's row height explicitly,
+              because grid intrinsic track sizing doesn't honor an item's
+              `aspect-ratio`, causing auto-rows to collapse to the caption's
+              line height and cards to overlap. */}
           <div
             style={{
               flex: 1,
@@ -660,6 +686,7 @@ export function MemeEditor() {
               padding: 10,
               display: 'grid',
               gridTemplateColumns: 'repeat(3, 1fr)',
+              gridAutoRows: '100px',
               gap: 6,
               alignContent: 'start',
             }}
@@ -695,8 +722,8 @@ export function MemeEditor() {
                 ))
               : displayList.map((tmpl) => (
                   <div key={tmpl.id} style={cardStyle(tmpl)} onClick={() => loadTemplate(tmpl)} title={tmpl.name}>
-                    <img src={tmpl.url} alt={tmpl.name} loading="lazy" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
-                    <div style={{ fontSize: 10, padding: '3px 4px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <img src={tmpl.url} alt={tmpl.name} loading="lazy" style={{ width: '100%', flex: 1, minHeight: 0, objectFit: 'cover', display: 'block' }} />
+                    <div style={{ fontSize: 10, padding: '3px 4px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 0 }}>
                       {recent.includes(tmpl.id) && !search && <span style={{ color: 'var(--accent)', marginRight: 3 }}>*</span>}
                       {tmpl.name}
                     </div>
@@ -750,8 +777,10 @@ export function MemeEditor() {
           </aside>
         )}
       </div>
+      )}
 
       {/* ===================== MOBILE layout (< 640px) ===================== */}
+      {isMobileView && (
       <div className="meme-layout-mobile">
         {/* 1. Template picker — collapsible carousel */}
         <div style={{ flexShrink: 0, background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
@@ -850,6 +879,7 @@ export function MemeEditor() {
           </div>
         )}
       </div>
+      )}
 
       <style>{`
         @keyframes pulse {
@@ -857,9 +887,14 @@ export function MemeEditor() {
           50% { opacity: 0.4; }
         }
 
-        /* Desktop layout */
+        /* Layouts are gated by isMobileView state (via matchMedia), so only
+           one is in the DOM at a time. The CSS just supplies flex box styling. */
         .meme-layout-desktop {
-          display: none;
+          display: flex;
+          flex-direction: row;
+          flex: 1;
+          overflow: hidden;
+          min-height: 0;
         }
         .meme-layout-mobile {
           display: flex;
@@ -867,36 +902,23 @@ export function MemeEditor() {
           flex: 1;
           overflow: hidden;
         }
-
-        @media (min-width: 640px) {
-          .meme-layout-desktop {
-            display: flex;
-            flex-direction: row;
-            flex: 1;
-            overflow: hidden;
-            min-height: 0;
-          }
-          .meme-layout-mobile {
-            display: none;
-          }
-          .sidebar-left {
-            width: 280px;
-            flex-shrink: 0;
-            background: var(--surface);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-          }
-          .sidebar-right {
-            width: 300px;
-            flex-shrink: 0;
-            background: var(--surface);
-            border-left: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-          }
+        .sidebar-left {
+          width: 280px;
+          flex-shrink: 0;
+          background: var(--surface);
+          border-right: 1px solid var(--border);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        .sidebar-right {
+          width: 300px;
+          flex-shrink: 0;
+          background: var(--surface);
+          border-left: 1px solid var(--border);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
         }
 
         .font-slider {
