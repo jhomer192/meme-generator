@@ -146,6 +146,9 @@ export function MemeEditor() {
 
   // Apply canvas dimensions AND redraw in a single effect to avoid race conditions.
   // Both must happen in order: set dims first, then draw the image.
+  // isMobileView is in the deps so that when the viewport flips buckets,
+  // we resize and redraw the newly mounted canvas (ref changes don't trigger
+  // effects on their own).
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !canvasDims || !loadedImg) return;
@@ -154,7 +157,7 @@ export function MemeEditor() {
     canvas.height = canvasDims.h;
     // Draw immediately after setting dimensions
     drawMeme(canvas, loadedImg, textBoxes);
-  }, [canvasDims, loadedImg, textBoxes]);
+  }, [canvasDims, loadedImg, textBoxes, isMobileView]);
 
   const isMobile = () => window.innerWidth < 640;
 
