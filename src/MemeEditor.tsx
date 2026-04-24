@@ -114,6 +114,7 @@ export function MemeEditor() {
   // the ref flips to whichever mounted last, leaving the visible canvas
   // unsized (stuck at the 300x150 HTML default). Rendering only one layout
   // at a time keeps a single canvas in the tree.
+  const [saveModalUrl, setSaveModalUrl] = useState<string | null>(null);
   const [isMobileView, setIsMobileView] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 640 : false,
   );
@@ -211,12 +212,25 @@ export function MemeEditor() {
     img.src = url;
   };
 
+  const isIos = () =>
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
   const handleDownload = () => {
     if (!loadedImg || !selected) return;
     const offscreen = document.createElement('canvas');
     offscreen.width = selected.width;
     offscreen.height = selected.height;
     drawMeme(offscreen, loadedImg, textBoxes);
+
+    if (isIos()) {
+      // iOS Safari ignores <a download> — show the image in a modal instead
+      // so the user can long-press → "Save to Photos"
+      const dataUrl = offscreen.toDataURL('image/png');
+      setSaveModalUrl(dataUrl);
+      return;
+    }
+
     offscreen.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
@@ -867,21 +881,51 @@ export function MemeEditor() {
           </div>
         )}
 
-        {/* 3. Text controls — scrollable, max ~40vh */}
-        {selected && (
-          <div style={{ flexShrink: 0, maxHeight: '40vh', overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8, borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
-            {renderTextBoxCards()}
-            {addTextButton}
-          </div>
-        )}
-
-        {/* 4. Download — always visible, not inside scroll */}
+        {/* 3. Download — always visible right below canvas */}
         {selected && (
           <div style={{ flexShrink: 0, padding: '10px 12px', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
             {downloadButton}
           </div>
         )}
+
+        {/* 4. Text controls — fill remaining space, scrollable */}
+        {selected && (
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8, borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
+            {renderTextBoxCards()}
+            {addTextButton}
+          </div>
+        )}
       </div>
+      )}
+
+      {/* iOS save modal */}
+      {saveModalUrl && (
+        <div
+          onClick={() => { URL.revokeObjectURL(saveModalUrl); setSaveModalUrl(null); }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 999,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            padding: 20, gap: 16,
+          }}
+        >
+          <p style={{ color: '#fff', fontWeight: 600, fontSize: 15, textAlign: 'center', margin: 0 }}>
+            Long press the image below → <em>Save to Photos</em>
+          </p>
+          <img
+            src={saveModalUrl}
+            alt="Your meme"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '100%', maxHeight: '70vh', borderRadius: 8, boxShadow: '0 4px 24px rgba(0,0,0,0.6)' }}
+          />
+          <button
+            onClick={() => { URL.revokeObjectURL(saveModalUrl); setSaveModalUrl(null); }}
+            style={{ padding: '8px 24px', borderRadius: 8, border: 'none', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', fontSize: 14 }}
+          >
+            Done
+          </button>
+        </div>
       )}
 
       <style>{`
