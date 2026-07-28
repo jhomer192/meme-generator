@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { track } from './lib/analytics'
 
 function uid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -218,6 +219,9 @@ export function MemeEditor() {
 
   const handleDownload = () => {
     if (!loadedImg || !selected) return;
+    // Finishing a meme is the only outcome this app has; edits before it are
+    // just intent.
+    track('meme-downloaded');
     const offscreen = document.createElement('canvas');
     offscreen.width = selected.width;
     offscreen.height = selected.height;
