@@ -2,7 +2,7 @@
 
 A clean, fast meme editor that runs entirely in the browser — no uploads, no watermarks.
 
-**[Try it live →](https://jhomer192.github.io/meme-generator/)**
+**[Try it live →](https://jackhomer.com/meme-generator/)**
 
 ## Features
 

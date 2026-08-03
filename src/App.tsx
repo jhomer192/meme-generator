@@ -28,6 +28,27 @@ export default function App() {
       <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
         <MemeEditor />
       </div>
+
+      <footer
+        style={{
+          flexShrink: 0,
+          padding: '8px 20px',
+          background: 'var(--surface)',
+          borderTop: '1px solid var(--border)',
+          textAlign: 'center',
+          fontSize: 12,
+          color: 'var(--text-dim)',
+        }}
+      >
+        Built by{' '}
+        <a href="https://jackhomer.com" style={{ color: 'inherit' }}>
+          Jack Homer
+        </a>
+        {' · '}
+        <a href="https://jackhomer.com/projects/meme-maker/" style={{ color: 'inherit' }}>
+          Project write-up
+        </a>
+      </footer>
     </div>
   );
 }
