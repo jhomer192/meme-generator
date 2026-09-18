@@ -1,0 +1,6 @@
+.app-guide { box-sizing: border-box; max-width: 72rem; margin: 2rem auto; padding: 1.5rem; border-top: 1px solid var(--border, #cbd5e1); background: var(--bg, #fff); color: var(--text, #172033); font: 1rem/1.65 system-ui, sans-serif; overflow-wrap: anywhere; }
+.app-guide h2 { margin: 0 0 .75rem; font-size: 1.4rem; font-weight: 700; line-height: 1.3; }
+.app-guide p { margin: .75rem 0; }
+.app-guide a { color: inherit; text-decoration: underline; text-underline-offset: .2em; }
+.app-guide a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+body > #root:empty { height: auto; }
