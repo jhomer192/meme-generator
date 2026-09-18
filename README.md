@@ -30,3 +30,5 @@ npm run dev
 React 19 and TypeScript on Vite. Drawing, hit-testing, and export are plain canvas 2D with no image library involved.
 
 Write-up: https://jackhomer.com/projects/meme-maker/
+
+A project by [Jack Homer](https://jackhomer.com/).
